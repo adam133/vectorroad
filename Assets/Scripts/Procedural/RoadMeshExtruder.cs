@@ -163,12 +163,14 @@ namespace TerraDrive.Procedural
         /// <summary>
         /// Generates a road surface mesh (with UV0 for asphalt tiling and UV1 for
         /// lane-marking tiling) plus a separate kerb mesh, using the canonical width
-        /// for <paramref name="roadType"/>.
+        /// for <paramref name="roadType"/>.  The <see cref="RoadMeshResult"/> returned
+        /// includes region-appropriate texture identifiers for the road surface and
+        /// the kerb.
         /// </summary>
         /// <param name="splinePoints">
         /// Ordered world-space centre-line positions.  Requires at least two points.
         /// </param>
-        /// <param name="roadType">Road classification used to select the width.</param>
+        /// <param name="roadType">Road classification used to select the width and surface texture.</param>
         /// <param name="uvTileLength">
         /// Asphalt texture V-tile length in metres (UV channel 0).  Default 10 m.
         /// </param>
@@ -178,8 +180,13 @@ namespace TerraDrive.Procedural
         /// </param>
         /// <param name="kerbWidth">Width of each kerb strip in metres.</param>
         /// <param name="kerbHeight">Height of kerb surfaces above the road plane.</param>
+        /// <param name="region">
+        /// Climate zone used to select region-appropriate texture identifiers.
+        /// Defaults to <see cref="RegionType.Unknown"/>.
+        /// </param>
         /// <returns>
-        /// A <see cref="RoadMeshResult"/> containing the road mesh and the kerb mesh.
+        /// A <see cref="RoadMeshResult"/> containing the road mesh, the kerb mesh,
+        /// and region-appropriate texture identifiers.
         /// </returns>
         public static RoadMeshResult ExtrudeWithDetails(
             IList<Vector3> splinePoints,
@@ -187,18 +194,23 @@ namespace TerraDrive.Procedural
             float uvTileLength           = 10f,
             float laneMarkingTileLength  = DefaultLaneMarkingTileLength,
             float kerbWidth              = DefaultKerbWidth,
-            float kerbHeight             = DefaultKerbHeight) =>
+            float kerbHeight             = DefaultKerbHeight,
+            RegionType region            = RegionType.Unknown) =>
             ExtrudeWithDetails(
                 splinePoints,
                 GetWidthForRoadType(roadType),
                 uvTileLength,
                 laneMarkingTileLength,
                 kerbWidth,
-                kerbHeight);
+                kerbHeight,
+                region,
+                roadType);
 
         /// <summary>
         /// Generates a road surface mesh (with UV0 for asphalt tiling and UV1 for
-        /// lane-marking tiling) plus a separate kerb mesh.
+        /// lane-marking tiling) plus a separate kerb mesh.  The <see cref="RoadMeshResult"/>
+        /// returned includes region-appropriate texture identifiers for the road surface
+        /// and the kerb.
         /// </summary>
         /// <param name="splinePoints">
         /// Ordered world-space centre-line positions.  Requires at least two points.
@@ -212,8 +224,17 @@ namespace TerraDrive.Procedural
         /// </param>
         /// <param name="kerbWidth">Width of each kerb strip in metres.</param>
         /// <param name="kerbHeight">Height of kerb surfaces above the road plane.</param>
+        /// <param name="region">
+        /// Climate zone used to select region-appropriate texture identifiers.
+        /// Defaults to <see cref="RegionType.Unknown"/>.
+        /// </param>
+        /// <param name="roadType">
+        /// Road classification used for surface texture selection.
+        /// Defaults to <see cref="RoadType.Unknown"/>.
+        /// </param>
         /// <returns>
-        /// A <see cref="RoadMeshResult"/> containing the road mesh and the kerb mesh.
+        /// A <see cref="RoadMeshResult"/> containing the road mesh, the kerb mesh,
+        /// and region-appropriate texture identifiers.
         /// </returns>
         public static RoadMeshResult ExtrudeWithDetails(
             IList<Vector3> splinePoints,
@@ -221,12 +242,14 @@ namespace TerraDrive.Procedural
             float uvTileLength           = 10f,
             float laneMarkingTileLength  = DefaultLaneMarkingTileLength,
             float kerbWidth              = DefaultKerbWidth,
-            float kerbHeight             = DefaultKerbHeight)
+            float kerbHeight             = DefaultKerbHeight,
+            RegionType region            = RegionType.Unknown,
+            RoadType roadType            = RoadType.Unknown)
         {
             if (splinePoints == null || splinePoints.Count < 2)
             {
                 Debug.LogWarning("[RoadMeshExtruder] Need at least 2 spline points.");
-                return new RoadMeshResult(new Mesh(), new Mesh());
+                return new RoadMeshResult(new Mesh(), new Mesh(), string.Empty, string.Empty);
             }
 
             int n = splinePoints.Count;
@@ -284,7 +307,11 @@ namespace TerraDrive.Procedural
             // ── Kerb mesh ────────────────────────────────────────────────────
             Mesh kerbMesh = BuildKerbMesh(splinePoints, halfWidth, kerbWidth, kerbHeight, uvTileLength);
 
-            return new RoadMeshResult(roadMesh, kerbMesh);
+            // ── Texture identifiers ──────────────────────────────────────────
+            string roadTextureId = RegionTextures.GetRoadSurfaceTextureId(region, roadType);
+            string kerbTextureId = RegionTextures.GetKerbTextureId(region);
+
+            return new RoadMeshResult(roadMesh, kerbMesh, roadTextureId, kerbTextureId);
         }
 
         // ── Private helpers ───────────────────────────────────────────────────

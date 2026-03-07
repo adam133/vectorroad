@@ -368,5 +368,117 @@ namespace TerraDrive.Tests
             Assert.That(leftOuter,  Is.LessThan(-halfWidth));
             Assert.That(rightOuter, Is.GreaterThan(halfWidth));
         }
+
+        // ── Region texture identifiers ────────────────────────────────────────
+
+        [Test]
+        public void ExtrudeWithDetails_DefaultRegion_ReturnsNonEmptyTextureIds()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+
+            Assert.That(result.RoadTextureId, Is.Not.Null.And.Not.Empty);
+            Assert.That(result.KerbTextureId, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_NullPoints_ReturnsEmptyTextureIds()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(null!, RoadType.Primary);
+
+            Assert.That(result.RoadTextureId, Is.Empty);
+            Assert.That(result.KerbTextureId, Is.Empty);
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Temperate_HasTemperateRoadTexture()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Primary, region: RegionType.Temperate);
+
+            Assert.That(result.RoadTextureId, Is.EqualTo("road_asphalt_temperate"));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Desert_HasDesertRoadTexture()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Primary, region: RegionType.Desert);
+
+            Assert.That(result.RoadTextureId, Is.EqualTo("road_asphalt_desert"));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Temperate_HasStoneKerbTexture()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Residential, region: RegionType.Temperate);
+
+            Assert.That(result.KerbTextureId, Is.EqualTo("kerb_stone"));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Mediterranean_HasGraniteKerbTexture()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Secondary, region: RegionType.Mediterranean);
+
+            Assert.That(result.KerbTextureId, Is.EqualTo("kerb_granite"));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Dirt_DirtRoad_HasDirtSurfaceTexture()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Dirt, region: RegionType.Temperate);
+
+            Assert.That(result.RoadTextureId, Is.EqualTo("road_dirt"));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Dirt_DesertRegion_HasSandSurfaceTexture()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Dirt, region: RegionType.Desert);
+
+            Assert.That(result.RoadTextureId, Is.EqualTo("road_sand"));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_AllRegions_ReturnNonEmptyRoadTextureId()
+        {
+            foreach (RegionType region in System.Enum.GetValues(typeof(RegionType)))
+            {
+                RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                    TwoPoints, RoadType.Residential, region: region);
+
+                Assert.That(result.RoadTextureId, Is.Not.Null.And.Not.Empty,
+                    $"RoadTextureId must not be empty for region '{region}'.");
+            }
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_AllRegions_ReturnNonEmptyKerbTextureId()
+        {
+            foreach (RegionType region in System.Enum.GetValues(typeof(RegionType)))
+            {
+                RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                    TwoPoints, RoadType.Residential, region: region);
+
+                Assert.That(result.KerbTextureId, Is.Not.Null.And.Not.Empty,
+                    $"KerbTextureId must not be empty for region '{region}'.");
+            }
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_DifferentRegions_ProduceDifferentRoadTextures()
+        {
+            RoadMeshResult temperate = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Primary, region: RegionType.Temperate);
+            RoadMeshResult desert = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Primary, region: RegionType.Desert);
+
+            Assert.That(temperate.RoadTextureId, Is.Not.EqualTo(desert.RoadTextureId),
+                "Temperate and Desert regions should use different road textures.");
+        }
     }
 }

@@ -3,7 +3,8 @@ using UnityEngine;
 namespace TerraDrive.Procedural
 {
     /// <summary>
-    /// Holds the set of meshes produced by <see cref="RoadMeshExtruder.ExtrudeWithDetails"/>.
+    /// Holds the set of meshes and region-appropriate texture identifiers produced by
+    /// <see cref="RoadMeshExtruder.ExtrudeWithDetails"/>.
     /// </summary>
     public readonly struct RoadMeshResult
     {
@@ -26,10 +27,33 @@ namespace TerraDrive.Procedural
         /// </summary>
         public readonly Mesh KerbMesh;
 
-        public RoadMeshResult(Mesh roadMesh, Mesh kerbMesh)
+        /// <summary>
+        /// Region-appropriate texture asset name for the road surface (e.g.
+        /// <c>"road_asphalt_temperate"</c>).
+        /// Corresponds to a key in the project's texture/material registry.
+        /// </summary>
+        public readonly string RoadTextureId;
+
+        /// <summary>
+        /// Region-appropriate texture asset name for the kerb surface (e.g.
+        /// <c>"kerb_stone"</c>).
+        /// Corresponds to a key in the project's texture/material registry.
+        /// </summary>
+        public readonly string KerbTextureId;
+
+        /// <summary>
+        /// Creates a new <see cref="RoadMeshResult"/>.
+        /// </summary>
+        /// <param name="roadMesh">The extruded road surface mesh.</param>
+        /// <param name="kerbMesh">The combined kerb mesh.</param>
+        /// <param name="roadTextureId">Texture asset name for the road surface.</param>
+        /// <param name="kerbTextureId">Texture asset name for the kerb surface.</param>
+        public RoadMeshResult(Mesh roadMesh, Mesh kerbMesh, string roadTextureId, string kerbTextureId)
         {
-            RoadMesh = roadMesh;
-            KerbMesh = kerbMesh;
+            RoadMesh      = roadMesh;
+            KerbMesh      = kerbMesh;
+            RoadTextureId = roadTextureId;
+            KerbTextureId = kerbTextureId;
         }
     }
 }
