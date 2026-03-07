@@ -16,7 +16,7 @@ TerraDrive lets players race on procedurally generated tracks derived from actua
 |---|---|
 | Map Data | [OpenStreetMap (OSM)](https://www.openstreetmap.org/) / [Overpass API](https://overpass-api.de/) |
 | Terrain / 3D Tiles | [Cesium ion](https://cesium.com/platform/cesium-ion/) |
-| Game Engine | Unity 2022.3 LTS (current implementation) / Unreal Engine 5 (PCG + Nanite, production goal) |
+| Game Engine | Unity 6.3 LTS (current implementation) / Unreal Engine 5 (PCG + Nanite, production goal) |
 | Road Systems | Houdini Engine (road-to-mesh conversion) |
 | Asset Variation | [Synty Studios](https://syntystore.com/) low-poly kits / [Quixel Megascans](https://quixel.com/megascans) |
 
@@ -176,8 +176,8 @@ a standalone executable — see **[GETTING_STARTED.md](GETTING_STARTED.md)**.
 
 #### Prerequisites
 
-- Unity 2022.3 LTS or later (URP or HDRP recommended)
-- Python 3.9+ (for the OSM downloader tool)
+- Unity 6.3 LTS or later (URP or HDRP recommended)
+- Python 3.14+ (for the OSM downloader tool)
 - `requests` Python package (`pip install requests`)
 - .NET 8 SDK (for running unit tests outside Unity)
 
