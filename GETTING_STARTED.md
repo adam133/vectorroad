@@ -10,9 +10,9 @@ playable standalone executable.
 
 | Tool | Version | Purpose |
 |---|---|---|
-| [Unity Hub](https://unity.com/download) + **Unity 2022.3 LTS** | 2022.3.x | Game engine (required to build and play) |
+| [Unity Hub](https://unity.com/download) + **Unity 6.3 LTS** | 6000.3.x | Game engine (required to build and play) |
 | [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8) | 8.0+ | Run unit/integration tests outside Unity |
-| [Python](https://www.python.org/downloads/) | 3.9+ | OSM map downloader script |
+| [Python](https://www.python.org/downloads/) | 3.14+ | OSM map downloader script |
 | `requests` Python package | latest | Used by `osm_downloader.py` |
 
 ```bash
@@ -75,7 +75,7 @@ See [`Tools/README.md`](Tools/README.md) for the full argument reference.
 
 ## Step 3 — Open the Project in Unity
 
-1. **Install Unity 2022.3 LTS** via [Unity Hub](https://unity.com/download).
+1. **Install Unity 6.3 LTS** via [Unity Hub](https://unity.com/download).
    When prompted, include the **Windows/Mac/Linux Standalone Build Support** module for
    the platform you want to export to.
 
@@ -183,7 +183,7 @@ Run the produced binary to play the game outside the editor.
 | Car falls through ground | Wheel colliders not touching the plane | Move `Car` up until the WheelColliders rest on the Plane |
 | Car spins on the spot | WheelCollider radii too small | Increase the **Radius** on each WheelCollider to match the visual wheel |
 | Camera stutters | `positionDamping` too high | Lower **Position Damping** on the ChaseCam component (try `3`) |
-| No `WheelCollider` in Add Component list | Wrong Unity version | Ensure Unity 2022.3 LTS is installed (WheelCollider is a built-in Physics component) |
+| No `WheelCollider` in Add Component list | Wrong Unity version | Ensure Unity 6.3 LTS is installed (WheelCollider is a built-in Physics component) |
 
 ---
 
