@@ -16,8 +16,11 @@
     <Compile Include="../../Assets/Scripts/DataInversion/OSMParser.cs" />
     <Compile Include="../../Assets/Scripts/DataInversion/RegionType.cs" />
     <Compile Include="../../Assets/Scripts/DataInversion/RoadType.cs" />
+    <Compile Include="../../Assets/Scripts/Procedural/PropPlacement.cs" />
+    <Compile Include="../../Assets/Scripts/Procedural/PropType.cs" />
     <Compile Include="../../Assets/Scripts/Procedural/RoadMeshExtruder.cs" />
     <Compile Include="../../Assets/Scripts/Procedural/RoadMeshResult.cs" />
+    <Compile Include="../../Assets/Scripts/Procedural/RoadsidePropPlacer.cs" />
     <Compile Include="../../Assets/Scripts/Terrain/IElevationSource.cs" />
     <Compile Include="../../Assets/Scripts/Terrain/OpenElevationSource.cs" />
   </ItemGroup>
