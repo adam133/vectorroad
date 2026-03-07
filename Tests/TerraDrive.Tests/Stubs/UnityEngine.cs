@@ -59,6 +59,9 @@ namespace UnityEngine
             Math.Abs(y - other.y) < 1e-5f &&
             Math.Abs(z - other.z) < 1e-5f;
 
+        public static Vector3 operator /(Vector3 a, float s) =>
+            new Vector3(a.x / s, a.y / s, a.z / s);
+
         public override string ToString() => $"({x}, {y}, {z})";
     }
 
@@ -84,15 +87,19 @@ namespace UnityEngine
         public Vector2[] UVs => GetUVs(0);
 
         public void SetVertices(Vector3[] vertices) => Vertices = vertices ?? Array.Empty<Vector3>();
+        public void SetVertices(List<Vector3> vertices) => Vertices = vertices?.ToArray() ?? Array.Empty<Vector3>();
 
         public void SetUVs(int channel, Vector2[] uvs) =>
             _uvChannels[channel] = uvs ?? Array.Empty<Vector2>();
+        public void SetUVs(int channel, List<Vector2> uvs) =>
+            _uvChannels[channel] = uvs?.ToArray() ?? Array.Empty<Vector2>();
 
         /// <summary>Returns the UV array for the given channel, or an empty array if not set.</summary>
         public Vector2[] GetUVs(int channel) =>
             _uvChannels.TryGetValue(channel, out var uvs) ? uvs : Array.Empty<Vector2>();
 
         public void SetTriangles(int[] triangles, int submesh) => Triangles = triangles ?? Array.Empty<int>();
+        public void SetTriangles(List<int> triangles, int submesh) => Triangles = triangles?.ToArray() ?? Array.Empty<int>();
         public void RecalculateNormals() { }
         public void RecalculateBounds() { }
     }
@@ -110,5 +117,15 @@ namespace UnityEngine
     {
         public const float Deg2Rad = (float)(Math.PI / 180.0);
         public const float Rad2Deg = (float)(180.0 / Math.PI);
+    }
+
+    /// <summary>Stub for UnityEngine.Random used by BuildingGenerator.</summary>
+    public static class Random
+    {
+        private static readonly System.Random _rng = new System.Random();
+
+        /// <summary>Returns a random float in the range [<paramref name="min"/>, <paramref name="max"/>).</summary>
+        public static float Range(float min, float max) =>
+            min + (float)_rng.NextDouble() * (max - min);
     }
 }

@@ -1,15 +1,20 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using TerraDrive.DataInversion;
 
 namespace TerraDrive.Procedural
 {
     /// <summary>
-    /// Extrudes OSM building footprint polygons into 3D wall and roof meshes.
+    /// Extrudes OSM building footprint polygons into 3D wall and roof meshes,
+    /// and selects region-appropriate texture identifiers for each surface.
     ///
     /// Usage:
     /// <code>
-    ///   var (walls, roof) = BuildingGenerator.Extrude(footprint, minHeight: 5f, maxHeight: 15f);
+    ///   BuildingMeshResult result = BuildingGenerator.Extrude(footprint, minHeight: 5f, maxHeight: 15f, region: regionType);
+    ///   wallFilter.sharedMesh = result.WallMesh;
+    ///   roofFilter.sharedMesh = result.RoofMesh;
+    ///   // Apply materials by result.WallTextureId / result.RoofTextureId
     /// </code>
     ///
     /// Heights are derived from a seeded hash of the OSM <c>WayId</c> so the same map always
@@ -25,7 +30,8 @@ namespace TerraDrive.Procedural
         // ── Public API ─────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Extrudes a building footprint into separate wall and flat roof meshes.
+        /// Extrudes a building footprint into separate wall and flat roof meshes, and
+        /// selects region-appropriate texture identifiers for the surfaces.
         /// </summary>
         /// <param name="footprint">
         /// Ordered XZ world-space corner positions of the building outline.
@@ -36,26 +42,37 @@ namespace TerraDrive.Procedural
         /// <param name="wayId">
         /// OSM way identifier used as the RNG seed.  Pass 0 for a fully random height.
         /// </param>
+        /// <param name="region">
+        /// Climate zone used to select region-appropriate texture identifiers for
+        /// the wall and roof surfaces.  Defaults to <see cref="RegionType.Unknown"/>.
+        /// </param>
         /// <returns>
-        /// A tuple of <c>(wallMesh, roofMesh)</c> ready to assign to <c>MeshFilter</c> components.
+        /// A <see cref="BuildingMeshResult"/> containing the wall and roof meshes plus
+        /// texture identifiers ready to assign to <c>MeshFilter</c> and
+        /// <c>MeshRenderer</c> components.
         /// </returns>
-        public static (Mesh wallMesh, Mesh roofMesh) Extrude(
+        public static BuildingMeshResult Extrude(
             IList<Vector3> footprint,
             float minHeight = 5f,
             float maxHeight = 15f,
-            long wayId = 0)
+            long wayId = 0,
+            RegionType region = RegionType.Unknown)
         {
             if (footprint == null || footprint.Count < 3)
             {
                 Debug.LogWarning("[BuildingGenerator] Footprint must have at least 3 points.");
-                return (new Mesh(), new Mesh());
+                return new BuildingMeshResult(new Mesh(), new Mesh(), string.Empty, string.Empty);
             }
 
             float height = SeededHeight(wayId, minHeight, maxHeight);
 
             Mesh walls = BuildWalls(footprint, height);
-            Mesh roof = BuildRoof(footprint, height);
-            return (walls, roof);
+            Mesh roof  = BuildRoof(footprint, height);
+
+            string wallTextureId = RegionTextures.GetWallTextureId(region);
+            string roofTextureId = RegionTextures.GetRoofTextureId(region);
+
+            return new BuildingMeshResult(walls, roof, wallTextureId, roofTextureId);
         }
 
         // ── Private helpers ────────────────────────────────────────────────────
