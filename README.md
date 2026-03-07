@@ -161,25 +161,39 @@ dotnet test Tests/TerraDrive.Tests/TerraDrive.Tests.csproj
 
 ## Getting Started
 
-### Prerequisites
+For step-by-step instructions on running TerraDrive as a proof of concept — including
+verifying the pipeline with the .NET test suite, assembling the Unity scene, and producing
+a standalone executable — see **[GETTING_STARTED.md](GETTING_STARTED.md)**.
+
+### Quick Reference
+
+#### Prerequisites
 
 - Unity 2022.3 LTS or later (URP or HDRP recommended)
 - Python 3.9+ (for the OSM downloader tool)
 - `requests` Python package (`pip install requests`)
 - .NET 8 SDK (for running unit tests outside Unity)
 
-### Download Map Data
+#### Verify the pipeline (no Unity needed)
+
+```bash
+dotnet test Tests/TerraDrive.Tests/TerraDrive.Tests.csproj
+```
+
+#### Download Map Data
 
 ```bash
 cd Tools
 python osm_downloader.py --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm
 ```
 
-### Open in Unity
+#### Open in Unity
 
-1. Open the project in Unity.
-2. In the editor, navigate to **TerraDrive → Load OSM File** and select the downloaded `.osm` file.
-3. Click **Generate Level** to build the splines, road meshes, and roadside assets.
+1. Open the project root in Unity Hub.
+2. Create a new scene, add `GameManager`, a vehicle with `CarController`, and a `ChaseCam`
+   on the main camera (see [GETTING_STARTED.md](GETTING_STARTED.md) for full scene setup).
+3. Press **▶ Play** to drive, or use **File → Build Settings → Build** to export a
+   standalone executable.
 
 ---
 
