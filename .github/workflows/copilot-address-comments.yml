@@ -1,0 +1,58 @@
+name: Copilot Address Review Comments
+
+# When the Copilot code-reviewer submits a review, ask the Copilot coding
+# agent to automatically address any review comments it left.
+# If Copilot approved the PR without changes, request adam133's review directly.
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  address-comments:
+    runs-on: ubuntu-latest
+    # Only react to reviews submitted by the Copilot reviewer bot
+    if: contains(github.event.review.user.login, 'copilot')
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Ask Copilot agent to address review comments
+        # Only ask Copilot to fix things when it actually requested changes
+        if: github.event.review.state == 'changes_requested'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            console.log(`Copilot requested changes on PR #${prNumber}. Asking Copilot agent to address them.`);
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: '@github-copilot Please address all review comments in this pull request.',
+            });
+            console.log('Comment posted – Copilot agent will now address the review comments.');
+
+      - name: Request review from adam133 (Copilot approved, no changes needed)
+        # If Copilot approved straight away there is nothing to fix, so go
+        # directly to the human reviewer.
+        if: github.event.review.state == 'approved'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            console.log(`Copilot approved PR #${prNumber}. Requesting review from adam133.`);
+
+            try {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                reviewers: ['adam133'],
+              });
+              console.log('Review requested from adam133.');
+            } catch (error) {
+              core.warning(`Could not request review from adam133: ${error.message}`);
+            }
