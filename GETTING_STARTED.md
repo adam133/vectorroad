@@ -76,10 +76,10 @@ dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius
     --output Assets/Data/london.osm --no-elevation
 ```
 
-The `.osm` file is read by `OSMParser` at runtime; the `.elevation.csv` file can be loaded
-with `OsmDownloader.LoadElevationGrid(path)` into an `ElevationGrid` for use with
-`TerrainMeshGenerator.Generate` and `OSMParser.ParseAsync`.
-See [`Tools/README.md`](Tools/README.md) for the full argument reference.
+The `.osm` file is read by `OSMParser` at runtime; the `.elevation.csv` file is loaded by
+`MapLoader.LoadMapAsync` (or directly via `ElevationGrid.Load`) and used to lift every road
+and building node to the real-world terrain elevation and to generate the heightfield terrain
+mesh.  See [`Tools/README.md`](Tools/README.md) for the full argument reference.
 
 ---
 

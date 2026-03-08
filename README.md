@@ -177,6 +177,7 @@ They cover the following modules:
 | `OpenElevationSourceTests.cs` | `OpenElevationSource`, `IElevationSource` |
 | `TerrainMeshGeneratorTests.cs` | `ElevationGrid`, `ElevationGrid.SampleElevation`, `ElevationGrid` as `IElevationSource`, `TerrainMeshGenerator`, `TerrainMeshResult` |
 | `OsmDownloaderTests.cs` | `OsmDownloader` (including elevation grid download, save, and load) |
+| `MapLoaderTests.cs` | `MapLoader`, `MapData` (end-to-end load from `.osm` + `.elevation.csv` → roads, buildings, terrain mesh) |
 | `ChaseCamIntegrationTests.cs` | `ChaseCam` (integration, renders `chase-cam-preview.png`) |
 | `MapRendererIntegrationTests.cs` | `OSMParser` + `SplineGenerator` (integration, renders `map-preview.png`) |
 

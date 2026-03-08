@@ -305,51 +305,11 @@ namespace TerraDrive.Tools
         /// <see cref="SaveElevation"/>.
         /// </summary>
         /// <param name="path">Path to the <c>.elevation.csv</c> file.</param>
-        /// <returns>
-        /// An <see cref="ElevationGrid"/> reconstructed from the saved data.
-        /// </returns>
+        /// <returns>An <see cref="ElevationGrid"/> reconstructed from the saved data.</returns>
         /// <exception cref="InvalidOperationException">
         /// Thrown when the file format is invalid or the row/column counts are inconsistent.
         /// </exception>
         public static ElevationGrid LoadElevationGrid(string path)
-        {
-            string[] lines = File.ReadAllLines(path, Encoding.UTF8);
-
-            if (lines.Length < 1)
-                throw new InvalidOperationException("Elevation CSV is empty.");
-
-            string[] header = lines[0].Split(',');
-            if (header.Length < 6)
-                throw new InvalidOperationException(
-                    $"Elevation CSV header has {header.Length} field(s); expected 6 " +
-                    "(minLat,maxLat,minLon,maxLon,rows,cols).");
-
-            double minLat = double.Parse(header[0], CultureInfo.InvariantCulture);
-            double maxLat = double.Parse(header[1], CultureInfo.InvariantCulture);
-            double minLon = double.Parse(header[2], CultureInfo.InvariantCulture);
-            double maxLon = double.Parse(header[3], CultureInfo.InvariantCulture);
-            int    rows   = int.Parse(header[4], CultureInfo.InvariantCulture);
-            int    cols   = int.Parse(header[5], CultureInfo.InvariantCulture);
-
-            if (lines.Length < 1 + rows)
-                throw new InvalidOperationException(
-                    $"Elevation CSV has {lines.Length - 1} data row(s) but the header " +
-                    $"declares {rows}.");
-
-            var elevations = new double[rows, cols];
-            for (int r = 0; r < rows; r++)
-            {
-                string[] values = lines[1 + r].Split(',');
-                if (values.Length < cols)
-                    throw new InvalidOperationException(
-                        $"Elevation CSV data row {r} has {values.Length} value(s) but " +
-                        $"the header declares {cols} columns.");
-
-                for (int c = 0; c < cols; c++)
-                    elevations[r, c] = double.Parse(values[c], CultureInfo.InvariantCulture);
-            }
-
-            return new ElevationGrid(minLat, maxLat, minLon, maxLon, elevations);
-        }
+            => ElevationGrid.Load(path);
     }
 }

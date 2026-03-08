@@ -69,7 +69,34 @@ val[1,0],val[1,1],...,val[1,cols-1]
 val[rows-1,0],...,val[rows-1,cols-1]
 ```
 
-Row 0 is the southern edge of the bounding box; the last row is the northern edge.  Load the file at runtime with `OsmDownloader.LoadElevationGrid(path)` to get an `ElevationGrid` object ready for use with `TerrainMeshGenerator.Generate` and `OSMParser.ParseAsync`.
+Row 0 is the southern edge of the bounding box; the last row is the northern edge.  Load the file at runtime with `ElevationGrid.Load(path)` (or via the convenience wrapper `OsmDownloader.LoadElevationGrid(path)`) to get an `ElevationGrid` ready for use.
+
+### Loading at runtime with `MapLoader`
+
+The recommended way to consume the downloaded files in Unity (or in a .NET service) is through `MapLoader.LoadMapAsync`:
+
+```csharp
+MapData map = await MapLoader.LoadMapAsync(
+    "Assets/Data/london.osm",
+    "Assets/Data/london.elevation.csv",
+    originLat: 51.5074, originLon: -0.1278);
+
+// Roads and buildings: every node's Y is lifted to the terrain elevation
+foreach (RoadSegment road in map.Roads)    { /* RoadMeshExtruder.ExtrudeWithDetails */ }
+foreach (BuildingFootprint b in map.Buildings) { /* BuildingGenerator.Extrude */ }
+
+// Terrain mesh: assign directly to a Unity Mesh
+mesh.vertices  = map.TerrainMesh.Vertices;
+mesh.triangles = map.TerrainMesh.Triangles;
+mesh.uv        = map.TerrainMesh.UVs;
+mesh.RecalculateNormals();
+```
+
+`MapLoader.LoadMapAsync` internally:
+1. Loads the `.elevation.csv` via `ElevationGrid.Load`.
+2. Passes the `ElevationGrid` as an `IElevationSource` to `OSMParser.ParseAsync` — lifting every road and building node's Y coordinate to match the terrain, without any additional HTTP requests.
+3. Calls `TerrainMeshGenerator.Generate` with the same grid to produce the heightfield mesh.
+4. Returns all results together in a `MapData` object.
 
 ### Overpass Query
 
