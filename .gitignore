@@ -21,6 +21,8 @@ crashlytics-build.properties
 *.sln
 # Keep the hand-authored test project file
 !Tests/**/*.csproj
+# Keep the hand-authored tool project file
+!Tools/**/*.csproj
 *.suo
 *.tmp
 *.user
@@ -29,22 +31,13 @@ crashlytics-build.properties
 *.svd
 .consulo/
 
-# ── Python ────────────────────────────────────────────────────────────────────
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-dist/
-build/
-.eggs/
-.env
-.venv
-venv/
-env/
-
 # ── .NET test project build artifacts ────────────────────────────────────────
 Tests/**/bin/
 Tests/**/obj/
+
+# ── .NET tool build artifacts ─────────────────────────────────────────────────
+Tools/**/bin/
+Tools/**/obj/
 
 
 .DS_Store
