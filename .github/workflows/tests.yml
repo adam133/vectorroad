@@ -29,7 +29,7 @@ jobs:
         run: dotnet build Tests/TerraDrive.Tests/TerraDrive.Tests.csproj --no-restore
 
       - name: Run tests
-        run: dotnet test Tests/TerraDrive.Tests/TerraDrive.Tests.csproj --no-build --verbosity normal
+        run: dotnet test Tests/TerraDrive.Tests/TerraDrive.Tests.csproj --no-build --verbosity normal --filter "Category!=Integration"
 
   python-tools-tests:
     name: Run osm_downloader tests (Python)
@@ -50,4 +50,4 @@ jobs:
         run: pip install requests pytest
 
       - name: Run osm_downloader tests
-        run: pytest Tools/test_osm_downloader.py -v
+        run: pytest Tools/test_osm_downloader.py -v -m "not integration"

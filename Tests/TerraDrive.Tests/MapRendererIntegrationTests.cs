@@ -15,15 +15,31 @@ namespace TerraDrive.Tests
     [Category("Integration")]
     public class MapRendererIntegrationTests
     {
+        // Downtown Des Moines, IA — used as the world origin for all integration tests.
+        private const double OriginLat =  41.587881;
+        private const double OriginLon = -93.620142;
+
         // ── helpers ────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Walks up from the test-binary directory until it finds
-        /// <c>Assets/Data/map.osm.xml</c>, matching the repository layout regardless
-        /// of the build configuration (Debug / Release) or working directory.
+        /// Returns the path to the OSM map file.
+        /// In CI the <c>OSM_MAP_PATH</c> environment variable is set to the file
+        /// downloaded by <c>osm_downloader.py</c> so that the integration test uses
+        /// live API data rather than the static repo file.
+        /// When running locally the method falls back to locating
+        /// <c>Assets/Data/map.osm.xml</c> in the repository tree.
         /// </summary>
         private static string FindOsmMapFile()
         {
+            string? envPath = Environment.GetEnvironmentVariable("OSM_MAP_PATH");
+            if (!string.IsNullOrWhiteSpace(envPath))
+            {
+                if (!File.Exists(envPath))
+                    throw new FileNotFoundException(
+                        $"OSM_MAP_PATH is set but the file does not exist: {envPath}");
+                return envPath;
+            }
+
             string dir = Path.GetDirectoryName(
                 typeof(MapRendererIntegrationTests).Assembly.Location)
                 ?? Directory.GetCurrentDirectory();
@@ -40,8 +56,8 @@ namespace TerraDrive.Tests
             }
 
             throw new FileNotFoundException(
-                "Could not locate Assets/Data/map.osm.xml relative to the test binary. " +
-                "Ensure the repository is checked out in full.");
+                "Could not locate the OSM map file. Set the OSM_MAP_PATH environment " +
+                "variable or ensure Assets/Data/map.osm.xml exists in the repository.");
         }
 
         // ── tests ──────────────────────────────────────────────────────────────
@@ -54,10 +70,9 @@ namespace TerraDrive.Tests
             // ── Arrange ────────────────────────────────────────────────────────
             string osmPath = FindOsmMapFile();
 
-            // Centre of the map bounds (minlat=41.8739, maxlat=41.9175,
-            //                           minlon=-93.6240, maxlon=-93.5535)
-            const double originLat =  41.8957;
-            const double originLon = -93.5888;
+            // Centre of the map at downtown Des Moines, IA
+            const double originLat = OriginLat;
+            const double originLon = OriginLon;
 
             CoordinateConverter.ResetWorldOrigin();
             var (roads, buildings, _) = OSMParser.Parse(osmPath, originLat, originLon);
@@ -98,7 +113,7 @@ namespace TerraDrive.Tests
             string osmPath = FindOsmMapFile();
 
             CoordinateConverter.ResetWorldOrigin();
-            var (roads, buildings, _) = OSMParser.Parse(osmPath, 41.8957, -93.5888);
+            var (roads, buildings, _) = OSMParser.Parse(osmPath, OriginLat, OriginLon);
 
             Assert.That(roads.Count,     Is.GreaterThan(10), "Should find at least 10 roads");
             Assert.That(buildings.Count, Is.GreaterThan(0),  "Should find at least 1 building");
