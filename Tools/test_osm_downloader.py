@@ -395,5 +395,73 @@ class TestMain(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 1)
 
 
+# ---------------------------------------------------------------------------
+# Integration: downtown Des Moines, IA  (41.587881, -93.620142)
+# ---------------------------------------------------------------------------
+
+class TestDesMoinesCoordinates(unittest.TestCase):
+    """
+    Validates that osm_downloader produces a correct Overpass query and correctly
+    handles a simulated download for the downtown Des Moines, IA coordinates
+    (41.587881, -93.620142).
+    """
+
+    LAT = 41.587881
+    LON = -93.620142
+    RADIUS = 5000
+
+    def test_build_query_contains_des_moines_coordinates(self):
+        q = osm_downloader.build_query(self.LAT, self.LON, self.RADIUS)
+        self.assertIn(str(self.LAT), q)
+        self.assertIn(str(self.LON), q)
+        self.assertIn(str(self.RADIUS), q)
+
+    def test_parse_args_accepts_des_moines_coordinates(self):
+        args = osm_downloader.parse_args([
+            "--lat", str(self.LAT),
+            "--lon", str(self.LON),
+            "--radius", str(self.RADIUS),
+        ])
+        self.assertAlmostEqual(args.lat, self.LAT)
+        self.assertAlmostEqual(args.lon, self.LON)
+        self.assertEqual(args.radius, self.RADIUS)
+
+    @patch("osm_downloader.requests.post")
+    def test_download_osm_uses_des_moines_coordinates(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.text = SAMPLE_OVERPASS_XML
+        mock_resp.content = SAMPLE_OVERPASS_XML.encode()
+        mock_resp.raise_for_status = MagicMock()
+        mock_post.return_value = mock_resp
+
+        result = osm_downloader.download_osm(self.LAT, self.LON, self.RADIUS)
+
+        self.assertEqual(result, SAMPLE_OVERPASS_XML)
+        call_kwargs = mock_post.call_args[1]
+        query = call_kwargs["data"]["data"]
+        self.assertIn(str(self.LAT), query)
+        self.assertIn(str(self.LON), query)
+
+    @patch("osm_downloader.requests.post")
+    def test_main_writes_file_for_des_moines(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.text = SAMPLE_OVERPASS_XML
+        mock_resp.content = SAMPLE_OVERPASS_XML.encode()
+        mock_resp.raise_for_status = MagicMock()
+        mock_post.return_value = mock_resp
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out = os.path.join(tmpdir, "des_moines.osm")
+            osm_downloader.main([
+                "--lat", str(self.LAT),
+                "--lon", str(self.LON),
+                "--radius", str(self.RADIUS),
+                "--output", out,
+            ])
+            self.assertTrue(os.path.exists(out))
+            tree = ET.parse(out)
+            self.assertEqual(tree.getroot().tag, "osm")
+
+
 if __name__ == "__main__":
     unittest.main()

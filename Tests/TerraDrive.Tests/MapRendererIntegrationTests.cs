@@ -54,10 +54,9 @@ namespace TerraDrive.Tests
             // ── Arrange ────────────────────────────────────────────────────────
             string osmPath = FindOsmMapFile();
 
-            // Centre of the map bounds (minlat=41.8739, maxlat=41.9175,
-            //                           minlon=-93.6240, maxlon=-93.5535)
-            const double originLat =  41.8957;
-            const double originLon = -93.5888;
+            // Centre of the map at downtown Des Moines, IA
+            const double originLat =  41.587881;
+            const double originLon = -93.620142;
 
             CoordinateConverter.ResetWorldOrigin();
             var (roads, buildings, _) = OSMParser.Parse(osmPath, originLat, originLon);
@@ -98,7 +97,7 @@ namespace TerraDrive.Tests
             string osmPath = FindOsmMapFile();
 
             CoordinateConverter.ResetWorldOrigin();
-            var (roads, buildings, _) = OSMParser.Parse(osmPath, 41.8957, -93.5888);
+            var (roads, buildings, _) = OSMParser.Parse(osmPath, 41.587881, -93.620142);
 
             Assert.That(roads.Count,     Is.GreaterThan(10), "Should find at least 10 roads");
             Assert.That(buildings.Count, Is.GreaterThan(0),  "Should find at least 1 building");
