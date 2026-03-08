@@ -9,10 +9,10 @@ using TerraDrive.Tools;
 ///
 /// Usage:
 ///   OsmDownloader --lat &lt;latitude&gt; --lon &lt;longitude&gt; [--radius &lt;metres&gt;] [--output &lt;path&gt;]
-///                [--elevation] [--dem-rows &lt;n&gt;] [--dem-cols &lt;n&gt;]
+///                [--no-elevation] [--dem-rows &lt;n&gt;] [--dem-cols &lt;n&gt;]
 ///
 /// Example:
-///   OsmDownloader --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm --elevation
+///   OsmDownloader --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm
 /// </summary>
 internal static class Program
 {
@@ -22,7 +22,7 @@ internal static class Program
         double? lon        = null;
         int     radius     = 5000;
         string  output     = "output.osm";
-        bool    elevation  = false;
+        bool    elevation  = true;   // elevation is downloaded by default; suppress with --no-elevation
         int     demRows    = 32;
         int     demCols    = 32;
 
@@ -65,6 +65,10 @@ internal static class Program
 
                 case "--output" when i + 1 < args.Length:
                     output = args[++i];
+                    break;
+
+                case "--no-elevation":
+                    elevation = false;
                     break;
 
                 case "--elevation":
@@ -115,7 +119,7 @@ internal static class Program
             string content = await downloader.DownloadOsmAsync(lat.Value, lon.Value, radius);
             OsmDownloader.SaveOsm(content, output);
 
-            // ── Optional elevation / DEM download ────────────────────────────
+            // ── Elevation / DEM download (on by default) ─────────────────────
             if (elevation)
             {
                 string elevOutput = DeriveElevationPath(output);
@@ -154,21 +158,24 @@ internal static class Program
     {
         Console.WriteLine(
             "Usage: OsmDownloader --lat <latitude> --lon <longitude> " +
-            "[--radius <metres>] [--output <path>] [--elevation] " +
+            "[--radius <metres>] [--output <path>] [--no-elevation] " +
             "[--dem-rows <n>] [--dem-cols <n>]");
         Console.WriteLine();
         Console.WriteLine("Options:");
-        Console.WriteLine("  --lat        Centre latitude in decimal degrees (WGS-84, required)");
-        Console.WriteLine("  --lon        Centre longitude in decimal degrees (WGS-84, required)");
-        Console.WriteLine("  --radius     Search radius in metres (default: 5000)");
-        Console.WriteLine("  --output     Output .osm file path (default: output.osm)");
-        Console.WriteLine("  --elevation  Also download and save DEM elevation data alongside the .osm file");
-        Console.WriteLine("  --dem-rows   Latitude samples in the elevation grid (default: 32, min: 2)");
-        Console.WriteLine("  --dem-cols   Longitude samples in the elevation grid (default: 32, min: 2)");
+        Console.WriteLine("  --lat           Centre latitude in decimal degrees (WGS-84, required)");
+        Console.WriteLine("  --lon           Centre longitude in decimal degrees (WGS-84, required)");
+        Console.WriteLine("  --radius        Search radius in metres (default: 5000)");
+        Console.WriteLine("  --output        Output .osm file path (default: output.osm)");
+        Console.WriteLine("  --no-elevation  Skip the DEM elevation download (elevation is included by default)");
+        Console.WriteLine("  --dem-rows      Latitude samples in the elevation grid (default: 32, min: 2)");
+        Console.WriteLine("  --dem-cols      Longitude samples in the elevation grid (default: 32, min: 2)");
         Console.WriteLine();
         Console.WriteLine("Examples:");
+        Console.WriteLine("  # Download OSM + elevation (default behaviour — saves london.osm and london.elevation.csv)");
         Console.WriteLine("  OsmDownloader --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm");
-        Console.WriteLine("  OsmDownloader --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm --elevation");
-        Console.WriteLine("  OsmDownloader --lat 35.6595 --lon 139.7004 --radius 2000 --output ../Assets/Data/tokyo_shibuya.osm --elevation --dem-rows 64 --dem-cols 64");
+        Console.WriteLine("  # Skip elevation download");
+        Console.WriteLine("  OsmDownloader --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm --no-elevation");
+        Console.WriteLine("  # Higher-resolution elevation grid");
+        Console.WriteLine("  OsmDownloader --lat 35.6595 --lon 139.7004 --radius 2000 --output ../Assets/Data/tokyo_shibuya.osm --dem-rows 64 --dem-cols 64");
     }
 }

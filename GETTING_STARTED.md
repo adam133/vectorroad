@@ -47,10 +47,12 @@ A successful run confirms:
 
 ## Step 2 — Download Real-World Map Data
 
-Use the bundled Overpass API downloader to fetch road and building data for any location:
+Use the bundled Overpass API downloader to fetch road and building data for any location.
+By default, a DEM elevation grid is also downloaded and saved as a companion `.elevation.csv` file:
 
 ```bash
 # Central London (5 km radius — good first test)
+# Saves london.osm + london.elevation.csv
 dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 \
     --output Assets/Data/london.osm
 
@@ -59,17 +61,19 @@ dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius
     --output Assets/Data/london_small.osm
 ```
 
-To also bundle DEM elevation data alongside the `.osm` file, add `--elevation`.  This
-downloads a SRTM 30 m elevation grid for the same bounding box and saves it as a companion
-`.elevation.csv` file (e.g. `london.elevation.csv`):
+To use a higher-resolution elevation grid, pass `--dem-rows` and `--dem-cols`:
+
+```bash
+# 64×64 elevation samples instead of the default 32×32
+dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 \
+    --output Assets/Data/london.osm --dem-rows 64 --dem-cols 64
+```
+
+To skip the elevation download entirely, pass `--no-elevation`:
 
 ```bash
 dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 \
-    --output Assets/Data/london.osm --elevation
-
-# Higher-resolution elevation grid (64×64 samples instead of the default 32×32)
-dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 \
-    --output Assets/Data/london.osm --elevation --dem-rows 64 --dem-cols 64
+    --output Assets/Data/london.osm --no-elevation
 ```
 
 The `.osm` file is read by `OSMParser` at runtime; the `.elevation.csv` file can be loaded
@@ -274,7 +278,7 @@ Run the produced binary to play the game outside the editor.
 | Building footprint → 3D mesh | ✅ Working |
 | Roadside prop placement | ✅ Working |
 | Region / biome detection from OSM tags | ✅ Working |
-| Elevation (DEM) integration | ✅ Working — `ElevationGrid.SampleAsync` + `TerrainMeshGenerator.Generate` + `OSMParser.ParseAsync` + `OsmDownloader --elevation` (downloads SRTM grid alongside `.osm`) |
+| Elevation (DEM) integration | ✅ Working — `ElevationGrid.SampleAsync` + `TerrainMeshGenerator.Generate` + `OSMParser.ParseAsync` + `OsmDownloader` downloads SRTM grid alongside `.osm` by default |
 | Car physics + chase camera | ✅ Working |
 | Game state machine | ✅ Working |
 | CLI project create + configure (batch mode) | ✅ Working — `ProjectSetup.Configure` via `-executeMethod` |

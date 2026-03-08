@@ -8,7 +8,7 @@ Editor and command-line utilities for the TerraDrive pipeline.
 
 Downloads road and building data from the [Overpass API](https://overpass-api.de/) for a given GPS coordinate and radius, then saves the result as an `.osm` file for use in Unity.
 
-Optionally, pass `--elevation` to also download a DEM elevation grid for the same bounding box (via the [Open-Elevation API](https://open-elevation.com), backed by SRTM 30 m data) and save it as a companion `.elevation.csv` file.
+By default, a DEM elevation grid is also downloaded for the same bounding box (via the [Open-Elevation API](https://open-elevation.com), backed by SRTM 30 m data) and saved as a companion `.elevation.csv` file.  Pass `--no-elevation` to suppress the elevation download.
 
 ### Build
 
@@ -19,7 +19,7 @@ dotnet build Tools/OsmDownloader/OsmDownloader.csproj
 ### Usage
 
 ```bash
-dotnet run --project Tools/OsmDownloader -- --lat <latitude> --lon <longitude> [--radius <metres>] [--output <path>] [--elevation] [--dem-rows <n>] [--dem-cols <n>]
+dotnet run --project Tools/OsmDownloader -- --lat <latitude> --lon <longitude> [--radius <metres>] [--output <path>] [--no-elevation] [--dem-rows <n>] [--dem-cols <n>]
 ```
 
 Or run the compiled binary directly after publishing:
@@ -35,24 +35,24 @@ Tools/OsmDownloader/publish/OsmDownloader --lat <latitude> --lon <longitude> [--
 | `--lon` | *(required)* | Centre longitude (WGS-84) |
 | `--radius` | `5000` | Search radius in metres |
 | `--output` | `output.osm` | Path to write the `.osm` file |
-| `--elevation` | *(off)* | Also download and save DEM elevation data alongside the `.osm` |
+| `--no-elevation` | *(elevation on)* | Skip the DEM elevation download |
 | `--dem-rows` | `32` | Latitude samples in the elevation grid (min: 2) |
 | `--dem-cols` | `32` | Longitude samples in the elevation grid (min: 2) |
 
 ### Examples
 
 ```bash
-# Download 5 km of roads around central London
+# Download 5 km of roads around central London — also downloads london.elevation.csv (default)
 dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm
 
-# Download 2 km of roads around Shibuya, Tokyo
+# Download 2 km of roads around Shibuya, Tokyo — also downloads tokyo_shibuya.elevation.csv
 dotnet run --project Tools/OsmDownloader -- --lat 35.6595 --lon 139.7004 --radius 2000 --output ../Assets/Data/tokyo_shibuya.osm
 
-# Download roads AND elevation data (saves london.osm + london.elevation.csv)
-dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm --elevation
+# Skip the elevation download
+dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm --no-elevation
 
 # Higher-resolution elevation grid (64×64 instead of the default 32×32)
-dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm --elevation --dem-rows 64 --dem-cols 64
+dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm --dem-rows 64 --dem-cols 64
 ```
 
 ### Output
@@ -91,11 +91,11 @@ out body;
 
 ### Elevation / DEM
 
-When `--elevation` is specified, the tool:
+Elevation is downloaded by default alongside every `.osm` file.  The tool:
 
 1. Computes a bounding box that encloses the circular download area using `OsmDownloader.ComputeBoundingBox`.
 2. Samples a `rows × cols` grid of geographic coordinates that span the bounding box.
 3. Sends the full batch to the [Open-Elevation REST API](https://open-elevation.com) (one POST, no API key required) and receives SRTM 30 m elevation values.
 4. Saves the resulting `ElevationGrid` as a CSV file via `OsmDownloader.SaveElevation`.
 
-The public API also supports self-hosted Open-Elevation instances and custom `IElevationSource` implementations — pass an `elevationSource` parameter to `OsmDownloader.DownloadElevationGridAsync` to override the default.
+Pass `--no-elevation` to skip this step entirely.  The public API also supports self-hosted Open-Elevation instances and custom `IElevationSource` implementations — pass an `elevationSource` parameter to `OsmDownloader.DownloadElevationGridAsync` to override the default.
