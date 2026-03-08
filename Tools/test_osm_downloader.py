@@ -27,6 +27,8 @@ import unittest
 import xml.etree.ElementTree as ET
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # Make sure osm_downloader is importable when running from the repo root or
 # from the Tools/ directory.
 sys.path.insert(0, os.path.dirname(__file__))
@@ -430,8 +432,6 @@ class TestDesMoinesCoordinates(unittest.TestCase):
 # Integration: downtown Des Moines, IA  (41.587881, -93.620142)
 # These tests call the live Overpass API and require network access.
 # ---------------------------------------------------------------------------
-
-import pytest
 
 @pytest.mark.integration
 class TestOsmDownloaderIntegration(unittest.TestCase):
