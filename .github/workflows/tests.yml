@@ -31,8 +31,8 @@ jobs:
       - name: Run tests
         run: dotnet test Tests/TerraDrive.Tests/TerraDrive.Tests.csproj --no-build --verbosity normal --filter "Category!=Integration"
 
-  python-tools-tests:
-    name: Run osm_downloader tests (Python)
+  osm-downloader-build:
+    name: Build OsmDownloader tool (.NET)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,13 +41,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
         with:
-          python-version: "3.12"
+          dotnet-version: "8.0.x"
 
-      - name: Install dependencies
-        run: pip install requests pytest
+      - name: Restore dependencies
+        run: dotnet restore Tools/OsmDownloader/OsmDownloader.csproj
 
-      - name: Run osm_downloader tests
-        run: pytest Tools/test_osm_downloader.py -v -m "not integration"
+      - name: Build
+        run: dotnet build Tools/OsmDownloader/OsmDownloader.csproj --no-restore

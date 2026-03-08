@@ -4,20 +4,27 @@ Editor and command-line utilities for the TerraDrive pipeline.
 
 ---
 
-## osm_downloader.py
+## OsmDownloader
 
 Downloads road and building data from the [Overpass API](https://overpass-api.de/) for a given GPS coordinate and radius, then saves the result as an `.osm` file for use in Unity.
 
-### Requirements
+### Build
 
 ```bash
-pip install requests
+dotnet build Tools/OsmDownloader/OsmDownloader.csproj
 ```
 
 ### Usage
 
 ```bash
-python osm_downloader.py --lat <latitude> --lon <longitude> [--radius <meters>] [--output <path>]
+dotnet run --project Tools/OsmDownloader -- --lat <latitude> --lon <longitude> [--radius <metres>] [--output <path>]
+```
+
+Or run the compiled binary directly after publishing:
+
+```bash
+dotnet publish Tools/OsmDownloader/OsmDownloader.csproj -c Release -o Tools/OsmDownloader/publish
+Tools/OsmDownloader/publish/OsmDownloader --lat <latitude> --lon <longitude> [--radius <metres>] [--output <path>]
 ```
 
 | Argument | Default | Description |
@@ -27,14 +34,14 @@ python osm_downloader.py --lat <latitude> --lon <longitude> [--radius <meters>] 
 | `--radius` | `5000` | Search radius in metres |
 | `--output` | `output.osm` | Path to write the `.osm` file |
 
-### Example
+### Examples
 
 ```bash
 # Download 5 km of roads around central London
-python osm_downloader.py --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm
+dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius 5000 --output ../Assets/Data/london.osm
 
 # Download 2 km of roads around Shibuya, Tokyo
-python osm_downloader.py --lat 35.6595 --lon 139.7004 --radius 2000 --output ../Assets/Data/tokyo_shibuya.osm
+dotnet run --project Tools/OsmDownloader -- --lat 35.6595 --lon 139.7004 --radius 2000 --output ../Assets/Data/tokyo_shibuya.osm
 ```
 
 ### Output
