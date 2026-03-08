@@ -396,14 +396,13 @@ class TestMain(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Integration: downtown Des Moines, IA  (41.587881, -93.620142)
+# Des Moines, IA coordinates — unit tests (no network I/O)
 # ---------------------------------------------------------------------------
 
 class TestDesMoinesCoordinates(unittest.TestCase):
     """
-    Validates that osm_downloader produces a correct Overpass query and correctly
-    handles a simulated download for the downtown Des Moines, IA coordinates
-    (41.587881, -93.620142).
+    Unit tests verifying that osm_downloader handles the downtown Des Moines,
+    IA coordinates (41.587881, -93.620142) correctly without any network I/O.
     """
 
     LAT = 41.587881
@@ -426,30 +425,58 @@ class TestDesMoinesCoordinates(unittest.TestCase):
         self.assertAlmostEqual(args.lon, self.LON)
         self.assertEqual(args.radius, self.RADIUS)
 
-    @patch("osm_downloader.requests.post")
-    def test_download_osm_uses_des_moines_coordinates(self, mock_post):
-        mock_resp = MagicMock()
-        mock_resp.text = SAMPLE_OVERPASS_XML
-        mock_resp.content = SAMPLE_OVERPASS_XML.encode()
-        mock_resp.raise_for_status = MagicMock()
-        mock_post.return_value = mock_resp
 
+# ---------------------------------------------------------------------------
+# Integration: downtown Des Moines, IA  (41.587881, -93.620142)
+# These tests call the live Overpass API and require network access.
+# ---------------------------------------------------------------------------
+
+import pytest
+
+@pytest.mark.integration
+class TestOsmDownloaderIntegration(unittest.TestCase):
+    """
+    Integration tests for osm_downloader.py that call the live Overpass API.
+
+    These tests require network access and may take up to 30 seconds.
+    They are excluded from the standard unit-test run (tests.yml) and are
+    executed only by the map-preview CI workflow (map-preview.yml).
+    """
+
+    LAT = 41.587881
+    LON = -93.620142
+    RADIUS = 5000
+
+    def test_download_osm_returns_valid_xml(self):
+        """download_osm returns a non-empty, well-formed OSM XML document."""
         result = osm_downloader.download_osm(self.LAT, self.LON, self.RADIUS)
+        self.assertIsInstance(result, str)
+        self.assertIn("<osm", result)
+        root = ET.fromstring(result)
+        self.assertEqual(root.tag, "osm")
 
-        self.assertEqual(result, SAMPLE_OVERPASS_XML)
-        call_kwargs = mock_post.call_args[1]
-        query = call_kwargs["data"]["data"]
-        self.assertIn(str(self.LAT), query)
-        self.assertIn(str(self.LON), query)
+    def test_download_osm_contains_nodes_and_ways(self):
+        """The live response for downtown Des Moines contains nodes and ways."""
+        result = osm_downloader.download_osm(self.LAT, self.LON, self.RADIUS)
+        root = ET.fromstring(result)
+        self.assertGreater(len(root.findall("node")), 0,
+            "Expected at least one <node> in the live Overpass response")
+        self.assertGreater(len(root.findall("way")), 0,
+            "Expected at least one <way> in the live Overpass response")
 
-    @patch("osm_downloader.requests.post")
-    def test_main_writes_file_for_des_moines(self, mock_post):
-        mock_resp = MagicMock()
-        mock_resp.text = SAMPLE_OVERPASS_XML
-        mock_resp.content = SAMPLE_OVERPASS_XML.encode()
-        mock_resp.raise_for_status = MagicMock()
-        mock_post.return_value = mock_resp
+    def test_download_osm_contains_highway_ways(self):
+        """The live response includes at least one road (highway tag)."""
+        result = osm_downloader.download_osm(self.LAT, self.LON, self.RADIUS)
+        root = ET.fromstring(result)
+        highway_ways = [
+            w for w in root.findall("way")
+            if any(t.attrib.get("k") == "highway" for t in w.findall("tag"))
+        ]
+        self.assertGreater(len(highway_ways), 0,
+            "Expected at least one way with highway tag in downtown Des Moines")
 
+    def test_main_downloads_and_saves_des_moines_osm(self):
+        """main() downloads real Des Moines data and writes a valid .osm file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             out = os.path.join(tmpdir, "des_moines.osm")
             osm_downloader.main([
@@ -459,8 +486,10 @@ class TestDesMoinesCoordinates(unittest.TestCase):
                 "--output", out,
             ])
             self.assertTrue(os.path.exists(out))
-            tree = ET.parse(out)
-            self.assertEqual(tree.getroot().tag, "osm")
+            root = ET.parse(out).getroot()
+            self.assertEqual(root.tag, "osm")
+            self.assertGreater(len(root.findall("node")), 0)
+            self.assertGreater(len(root.findall("way")), 0)
 
 
 if __name__ == "__main__":

@@ -50,4 +50,4 @@ jobs:
         run: pip install requests pytest
 
       - name: Run osm_downloader tests
-        run: pytest Tools/test_osm_downloader.py -v
+        run: pytest Tools/test_osm_downloader.py -v -m "not integration"
