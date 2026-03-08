@@ -30,3 +30,24 @@ jobs:
 
       - name: Run tests
         run: dotnet test Tests/TerraDrive.Tests/TerraDrive.Tests.csproj --no-build --verbosity normal
+
+  python-tools-tests:
+    name: Run osm_downloader tests (Python)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests pytest
+
+      - name: Run osm_downloader tests
+        run: pytest Tools/test_osm_downloader.py -v
