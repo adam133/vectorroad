@@ -60,7 +60,7 @@ namespace TerraDrive.Editor
         private string _statusMessage = string.Empty;
         private bool   _statusIsError;
 
-        private CancellationTokenSource? _cts;
+        private CancellationTokenSource _cts;
 
         // ── Menu item ──────────────────────────────────────────────────────────
 
@@ -257,7 +257,7 @@ namespace TerraDrive.Editor
             double latitude, double longitude)
         {
             // Find or create a MapSceneBuilder.
-            var builders = Object.FindObjectsByType<MapSceneBuilder>(FindObjectsSortMode.None);
+            var builders = UnityEngine.Object.FindObjectsByType<MapSceneBuilder>(FindObjectsSortMode.None);
             if (builders.Length > 1)
                 Debug.LogWarning("[LoadOsmMenu] Multiple MapSceneBuilder instances found in scene; configuring the first one.");
 
@@ -279,7 +279,7 @@ namespace TerraDrive.Editor
             builder.OriginLongitude  = longitude;
 
             // Sync the GameManager origin if one exists in the scene.
-            var gameManagers = Object.FindObjectsByType<GameManager>(FindObjectsSortMode.None);
+            var gameManagers = UnityEngine.Object.FindObjectsByType<GameManager>(FindObjectsSortMode.None);
             if (gameManagers.Length > 1)
                 Debug.LogWarning("[LoadOsmMenu] Multiple GameManager instances found in scene; syncing the first one.");
 
