@@ -1,0 +1,39 @@
+{
+  "name": "TerraDrive",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  // Install .NET 8 SDK via the official devcontainer feature
+  "features": {
+    "ghcr.io/devcontainers/features/dotnet:2": {
+      "version": "8.0"
+    }
+  },
+
+  // Install Unity Hub and its runtime dependencies after the container is created
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // GitHub Copilot – inline suggestions + chat panel
+        "github.copilot",
+        "github.copilot-chat",
+        // C# language support and rich editing for the TerraDrive codebase
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "terradrive.slnx",
+        "github.copilot.enable": {
+          "*": true
+        }
+      }
+    },
+    // NOTE: Unity license secrets (UNITY_LICENSE, UNITY_EMAIL, UNITY_PASSWORD) must be
+    // configured in GitHub repository settings under
+    // Settings > Secrets and variables > Codespaces
+    // so they are automatically injected as environment variables when the Codespace starts.
+  },
+
+  "remoteUser": "vscode"
+}
