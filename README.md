@@ -197,7 +197,7 @@ They cover the following modules:
 | `MaterialRegistryTests.cs` | `MaterialRegistry` |
 | `SpeedometerTests.cs` | `Speedometer`, `SpeedometerHud` |
 | `MinimapRendererTests.cs` | `MinimapRenderer`, `MinimapLine` |
-| `OsmLevelLoaderTests.cs` | `OsmLevelLoader` (path settings & validation for the **TerraDrive → Load OSM File / Generate Level** editor menu item) |
+| `OsmLevelLoaderTests.cs` | `OsmLevelLoader` (GPS coordinate settings & validation for the **TerraDrive → Load OSM File / Generate Level** editor menu item) |
 | `ChaseCamIntegrationTests.cs` | `ChaseCam` (integration, renders `chase-cam-preview.png`) |
 | `MapRendererIntegrationTests.cs` | `OSMParser` + `SplineGenerator` (integration, renders `map-preview.png`) |
 
@@ -304,16 +304,23 @@ You can also run the same configuration interactively from the Unity menu bar:
 
 ### Load OSM File / Generate Level (interactive)
 
-Once the project is open in the Unity Editor, you can load a pre-downloaded OSM map
-and generate the level without touching the Inspector:
+Once the project is open in the Unity Editor you can download a real-world map and
+generate the full level (terrain + roads + buildings) in a few clicks — no manual file
+management required:
 
 1. Click **TerraDrive → Load OSM File / Generate Level** in the Unity menu bar.
-2. Select the `.osm` (or `.osm.xml`) data file in the file-picker dialog.
-3. Select the companion `.elevation.csv` file.
-4. TerraDrive validates both paths; if either file is missing an error dialog is shown.
-5. The active scene's `MapSceneBuilder` component is found (or created) and its
-   `OsmFilePath` / `ElevationCsvPath` fields are set automatically.
-6. A confirmation dialog asks whether to **Enter Play Mode** immediately.  Clicking
+   An editor window opens.
+2. Enter the **Latitude** and **Longitude** of the map origin (decimal degrees, WGS-84).
+3. Set the **Radius** (metres) that controls how large an area is downloaded
+   (default: 500 m).
+4. Optionally change the **Output Directory** where the downloaded files are saved
+   (default: `Assets/Data/`).
+5. Click **Download & Generate Level**.  A progress bar shows download status while
+   TerraDrive fetches OSM road/building data from the Overpass API and the DEM
+   elevation grid from the Open-Elevation API.
+6. After download, the active scene's `MapSceneBuilder` component (created automatically
+   if absent) is wired to the downloaded files and the `GameManager` origin is synced.
+7. A confirmation dialog asks whether to **Enter Play Mode** immediately.  Clicking
    *Enter Play Mode* starts the `MapSceneBuilder` coroutine which drives the
    `GameManager` through `LoadingMap → GeneratingLevel → Racing`.
 

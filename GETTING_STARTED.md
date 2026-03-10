@@ -152,21 +152,22 @@ You can also trigger the same setup interactively at any time from the Unity men
 
 ### 3b. Load an OSM map with the editor menu item
 
-If you have already downloaded an `.osm` file and companion `.elevation.csv` (see Step 2
-above), you can point the scene at them without opening the Inspector:
+The quickest way to try any location — no manual file downloads or Inspector edits needed:
 
 1. Click **TerraDrive → Load OSM File / Generate Level** in the Unity menu bar.
-2. In the first file-picker, select your `.osm` (or `.osm.xml`) data file.
-3. In the second file-picker, select the companion `.elevation.csv` file.
-4. TerraDrive validates both paths.  If either file is missing, an error dialog is shown.
-5. The `MapSceneBuilder` component in the active scene is found (or created automatically)
-   and its **OsmFilePath** / **ElevationCsvPath** fields are updated.
-6. A confirmation dialog asks whether to **Enter Play Mode** immediately to generate the
-   level.  The scene is marked dirty; save it before entering play if you want to keep
-   the updated paths.
-
-This is the quickest way to try a new location — download the files with the CLI tool,
-then use the menu item to wire them into the scene in two clicks.
+   An editor window opens.
+2. Enter the **Latitude** and **Longitude** of your chosen map centre (decimal degrees,
+   WGS-84).  For example, central London: `51.5074`, `-0.1278`.
+3. Set the **Radius** in metres (default 500 m) to control how large an area is downloaded.
+4. Optionally change the **Output Directory** where the downloaded files are saved
+   (default: `Assets/Data/`).
+5. Click **Download & Generate Level**.  A progress bar shows download status while
+   TerraDrive fetches OSM road/building data from the Overpass API and the DEM elevation
+   grid from the Open-Elevation API.
+6. After download the active scene's `MapSceneBuilder` and `GameManager` are configured
+   automatically.  The scene is marked dirty — save it if you want to keep the settings.
+7. A confirmation dialog asks whether to **Enter Play Mode** immediately to build the
+   terrain, road, and building geometry.
 
 The scene contains:
 - **Directional Light** — a sun-like light angled at (50°, −30°, 0°).
@@ -297,7 +298,7 @@ Run the produced binary to play the game outside the editor.
 | Car physics + chase camera | ✅ Working |
 | Game state machine | ✅ Working |
 | CLI project create + configure (batch mode) | ✅ Working — `ProjectSetup.Configure` via `-executeMethod` |
-| Editor menu: Load OSM File / Generate Level | ✅ Working — **TerraDrive → Load OSM File / Generate Level** picks files, validates paths, wires `MapSceneBuilder`, and optionally enters Play mode |
+| Editor menu: Load OSM File / Generate Level | ✅ Working — **TerraDrive → Load OSM File / Generate Level** opens an editor window, accepts lat/lon/radius, downloads OSM + elevation data via `OsmDownloader`, wires `MapSceneBuilder` and `GameManager`, and optionally enters Play mode |
 | Automated release builds (CI/CD) | ✅ Working — push to `release` branch triggers `release.yml` |
 | Texture ID → Material wiring | ✅ Working — `MaterialRegistry` scene component + `ProofOfConcept.unity` with all 25 texture slots |
 | Runtime scene assembly | ✅ Working — `MapSceneBuilder` loads OSM + elevation data on Play, instantiates terrain / road / building GameObjects, and drives the `GameManager` state machine (`LoadingMap → GeneratingLevel → Racing`); pre-wired in `ProofOfConcept.unity` |

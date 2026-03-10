@@ -1,4 +1,3 @@
-using System.IO;
 using NUnit.Framework;
 using TerraDrive.Core;
 
@@ -6,254 +5,232 @@ namespace TerraDrive.Tests
 {
     /// <summary>
     /// Unit tests for <see cref="OsmLevelLoader"/> — the pure-C# helper that validates
-    /// the file-path settings used by the
+    /// GPS-coordinate settings for the
     /// <b>TerraDrive → Load OSM File / Generate Level</b> editor menu item.
     /// </summary>
     [TestFixture]
     public class OsmLevelLoaderTests
     {
-        // ── Helpers ───────────────────────────────────────────────────────────
-
-        private static string WriteTempFile(string content, string extension)
-        {
-            string path = Path.GetTempFileName() + extension;
-            File.WriteAllText(path, content);
-            return path;
-        }
-
-        private static void DeleteFile(string path)
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-
-        // ── IsValid / Validate — empty paths ─────────────────────────────────
+        // ── Default values ────────────────────────────────────────────────────
 
         [Test]
-        public void IsValid_BothPathsEmpty_ReturnsFalse()
+        public void DefaultRadius_IsExpected()
+        {
+            Assert.That(OsmLevelLoader.DefaultRadius, Is.EqualTo(500));
+        }
+
+        [Test]
+        public void DefaultConstruction_HasExpectedDefaults()
         {
             var loader = new OsmLevelLoader();
+
+            Assert.That(loader.Latitude,  Is.EqualTo(0.0));
+            Assert.That(loader.Longitude, Is.EqualTo(0.0));
+            Assert.That(loader.Radius,    Is.EqualTo(OsmLevelLoader.DefaultRadius));
+        }
+
+        // ── IsValid — valid coordinates ───────────────────────────────────────
+
+        [Test]
+        public void IsValid_ValidCoordinates_ReturnsTrue()
+        {
+            var loader = new OsmLevelLoader
+            {
+                Latitude  = 51.5074,
+                Longitude = -0.1278,
+                Radius    = 500,
+            };
+
+            Assert.That(loader.IsValid(), Is.True);
+        }
+
+        [Test]
+        public void IsValid_ZeroCoordinates_ReturnsTrue()
+        {
+            // (0, 0) is a valid coordinate (Atlantic Ocean off Gabon).
+            var loader = new OsmLevelLoader
+            {
+                Latitude  = 0.0,
+                Longitude = 0.0,
+                Radius    = 1000,
+            };
+
+            Assert.That(loader.IsValid(), Is.True);
+        }
+
+        [Test]
+        public void IsValid_ExactBoundaryLatitude_ReturnsTrue()
+        {
+            var loader = new OsmLevelLoader { Latitude = 90.0,  Longitude = 0.0, Radius = 100 };
+            Assert.That(loader.IsValid(), Is.True);
+
+            loader.Latitude = -90.0;
+            Assert.That(loader.IsValid(), Is.True);
+        }
+
+        [Test]
+        public void IsValid_ExactBoundaryLongitude_ReturnsTrue()
+        {
+            var loader = new OsmLevelLoader { Latitude = 0.0, Longitude = 180.0,  Radius = 100 };
+            Assert.That(loader.IsValid(), Is.True);
+
+            loader.Longitude = -180.0;
+            Assert.That(loader.IsValid(), Is.True);
+        }
+
+        [Test]
+        public void Validate_ValidCoordinates_ReturnsEmptyList()
+        {
+            var loader = new OsmLevelLoader
+            {
+                Latitude  = 48.8566,
+                Longitude =  2.3522,
+                Radius    = 1000,
+            };
+
+            Assert.That(loader.Validate(), Is.Empty);
+        }
+
+        // ── Latitude validation ───────────────────────────────────────────────
+
+        [Test]
+        public void IsValid_LatitudeTooHigh_ReturnsFalse()
+        {
+            var loader = new OsmLevelLoader { Latitude = 90.001, Longitude = 0.0, Radius = 500 };
 
             Assert.That(loader.IsValid(), Is.False);
         }
 
         [Test]
-        public void Validate_BothPathsEmpty_ReturnsTwoErrors()
+        public void IsValid_LatitudeTooLow_ReturnsFalse()
         {
-            var loader = new OsmLevelLoader();
+            var loader = new OsmLevelLoader { Latitude = -90.001, Longitude = 0.0, Radius = 500 };
+
+            Assert.That(loader.IsValid(), Is.False);
+        }
+
+        [Test]
+        public void Validate_LatitudeOutOfRange_ContainsLatitudeError()
+        {
+            var loader = new OsmLevelLoader { Latitude = 91.0, Longitude = 0.0, Radius = 500 };
 
             var errors = loader.Validate();
 
-            Assert.That(errors.Count, Is.EqualTo(2));
+            Assert.That(errors, Has.Some.Contains("Latitude"));
         }
 
         [Test]
-        public void Validate_OsmPathEmpty_ContainsOsmError()
+        public void Validate_LatitudeOutOfRange_ContainsExactValue()
         {
-            string csvPath = WriteTempFile("1,2,3,4,2,2\n1,1\n1,1\n", ".elevation.csv");
-            try
+            var loader = new OsmLevelLoader { Latitude = 95.0, Longitude = 0.0, Radius = 500 };
+
+            var errors = loader.Validate();
+
+            Assert.That(errors, Has.Some.Contains("95"));
+        }
+
+        // ── Longitude validation ──────────────────────────────────────────────
+
+        [Test]
+        public void IsValid_LongitudeTooHigh_ReturnsFalse()
+        {
+            var loader = new OsmLevelLoader { Latitude = 0.0, Longitude = 180.001, Radius = 500 };
+
+            Assert.That(loader.IsValid(), Is.False);
+        }
+
+        [Test]
+        public void IsValid_LongitudeTooLow_ReturnsFalse()
+        {
+            var loader = new OsmLevelLoader { Latitude = 0.0, Longitude = -180.001, Radius = 500 };
+
+            Assert.That(loader.IsValid(), Is.False);
+        }
+
+        [Test]
+        public void Validate_LongitudeOutOfRange_ContainsLongitudeError()
+        {
+            var loader = new OsmLevelLoader { Latitude = 0.0, Longitude = 200.0, Radius = 500 };
+
+            var errors = loader.Validate();
+
+            Assert.That(errors, Has.Some.Contains("Longitude"));
+        }
+
+        // ── Radius validation ─────────────────────────────────────────────────
+
+        [Test]
+        public void IsValid_RadiusZero_ReturnsFalse()
+        {
+            var loader = new OsmLevelLoader { Latitude = 0.0, Longitude = 0.0, Radius = 0 };
+
+            Assert.That(loader.IsValid(), Is.False);
+        }
+
+        [Test]
+        public void IsValid_RadiusNegative_ReturnsFalse()
+        {
+            var loader = new OsmLevelLoader { Latitude = 0.0, Longitude = 0.0, Radius = -1 };
+
+            Assert.That(loader.IsValid(), Is.False);
+        }
+
+        [Test]
+        public void Validate_RadiusZero_ContainsRadiusError()
+        {
+            var loader = new OsmLevelLoader { Latitude = 0.0, Longitude = 0.0, Radius = 0 };
+
+            var errors = loader.Validate();
+
+            Assert.That(errors, Has.Some.Contains("Radius"));
+        }
+
+        [Test]
+        public void IsValid_RadiusOne_ReturnsTrue()
+        {
+            var loader = new OsmLevelLoader { Latitude = 0.0, Longitude = 0.0, Radius = 1 };
+
+            Assert.That(loader.IsValid(), Is.True);
+        }
+
+        // ── Multiple errors ───────────────────────────────────────────────────
+
+        [Test]
+        public void Validate_AllInvalid_ReturnsThreeErrors()
+        {
+            var loader = new OsmLevelLoader
             {
-                var loader = new OsmLevelLoader
-                {
-                    OsmFilePath      = string.Empty,
-                    ElevationCsvPath = csvPath,
-                };
+                Latitude  = 100.0,
+                Longitude = 200.0,
+                Radius    = -5,
+            };
 
-                var errors = loader.Validate();
+            var errors = loader.Validate();
 
-                Assert.That(errors, Has.Some.Contains("OSM file path must not be empty"));
-            }
-            finally { DeleteFile(csvPath); }
+            Assert.That(errors.Count, Is.EqualTo(3));
+        }
+
+        // ── Property round-trip ───────────────────────────────────────────────
+
+        [Test]
+        public void Latitude_SetValue_RoundTrips()
+        {
+            var loader = new OsmLevelLoader { Latitude = 41.8957 };
+            Assert.That(loader.Latitude, Is.EqualTo(41.8957).Within(1e-9));
         }
 
         [Test]
-        public void Validate_CsvPathEmpty_ContainsCsvError()
+        public void Longitude_SetValue_RoundTrips()
         {
-            string osmPath = WriteTempFile("<osm/>", ".osm");
-            try
-            {
-                var loader = new OsmLevelLoader
-                {
-                    OsmFilePath      = osmPath,
-                    ElevationCsvPath = string.Empty,
-                };
-
-                var errors = loader.Validate();
-
-                Assert.That(errors, Has.Some.Contains("Elevation CSV path must not be empty"));
-            }
-            finally { DeleteFile(osmPath); }
-        }
-
-        // ── IsValid / Validate — missing files ────────────────────────────────
-
-        [Test]
-        public void Validate_OsmFileMissing_ContainsMissingFileError()
-        {
-            string csvPath = WriteTempFile("1,2,3,4,2,2\n1,1\n1,1\n", ".elevation.csv");
-            string nonExistentOsm = Path.Combine(Path.GetTempPath(),
-                Path.GetRandomFileName() + ".osm");
-            try
-            {
-                var loader = new OsmLevelLoader
-                {
-                    OsmFilePath      = nonExistentOsm,
-                    ElevationCsvPath = csvPath,
-                };
-
-                var errors = loader.Validate();
-
-                Assert.That(errors, Has.Some.Contains("OSM file not found"));
-            }
-            finally { DeleteFile(csvPath); }
+            var loader = new OsmLevelLoader { Longitude = -93.5888 };
+            Assert.That(loader.Longitude, Is.EqualTo(-93.5888).Within(1e-9));
         }
 
         [Test]
-        public void Validate_CsvFileMissing_ContainsMissingFileError()
+        public void Radius_SetValue_RoundTrips()
         {
-            string osmPath = WriteTempFile("<osm/>", ".osm");
-            string nonExistentCsv = Path.Combine(Path.GetTempPath(),
-                Path.GetRandomFileName() + ".elevation.csv");
-            try
-            {
-                var loader = new OsmLevelLoader
-                {
-                    OsmFilePath      = osmPath,
-                    ElevationCsvPath = nonExistentCsv,
-                };
-
-                var errors = loader.Validate();
-
-                Assert.That(errors, Has.Some.Contains("Elevation CSV file not found"));
-            }
-            finally { DeleteFile(osmPath); }
-        }
-
-        [Test]
-        public void IsValid_OsmFileMissing_ReturnsFalse()
-        {
-            string csvPath = WriteTempFile("1,2,3,4,2,2\n1,1\n1,1\n", ".elevation.csv");
-            string nonExistentOsm = Path.Combine(Path.GetTempPath(),
-                Path.GetRandomFileName() + ".osm");
-            try
-            {
-                var loader = new OsmLevelLoader
-                {
-                    OsmFilePath      = nonExistentOsm,
-                    ElevationCsvPath = csvPath,
-                };
-
-                Assert.That(loader.IsValid(), Is.False);
-            }
-            finally { DeleteFile(csvPath); }
-        }
-
-        // ── IsValid / Validate — valid paths ─────────────────────────────────
-
-        [Test]
-        public void IsValid_BothFilesExist_ReturnsTrue()
-        {
-            string osmPath = WriteTempFile("<osm/>", ".osm");
-            string csvPath = WriteTempFile("1,2,3,4,2,2\n1,1\n1,1\n", ".elevation.csv");
-            try
-            {
-                var loader = new OsmLevelLoader
-                {
-                    OsmFilePath      = osmPath,
-                    ElevationCsvPath = csvPath,
-                };
-
-                Assert.That(loader.IsValid(), Is.True);
-            }
-            finally { DeleteFile(osmPath); DeleteFile(csvPath); }
-        }
-
-        [Test]
-        public void Validate_BothFilesExist_ReturnsEmptyList()
-        {
-            string osmPath = WriteTempFile("<osm/>", ".osm");
-            string csvPath = WriteTempFile("1,2,3,4,2,2\n1,1\n1,1\n", ".elevation.csv");
-            try
-            {
-                var loader = new OsmLevelLoader
-                {
-                    OsmFilePath      = osmPath,
-                    ElevationCsvPath = csvPath,
-                };
-
-                Assert.That(loader.Validate(), Is.Empty);
-            }
-            finally { DeleteFile(osmPath); DeleteFile(csvPath); }
-        }
-
-        // ── Property assignment ───────────────────────────────────────────────
-
-        [Test]
-        public void OsmFilePath_DefaultValue_IsEmpty()
-        {
-            var loader = new OsmLevelLoader();
-            Assert.That(loader.OsmFilePath, Is.Empty);
-        }
-
-        [Test]
-        public void ElevationCsvPath_DefaultValue_IsEmpty()
-        {
-            var loader = new OsmLevelLoader();
-            Assert.That(loader.ElevationCsvPath, Is.Empty);
-        }
-
-        [Test]
-        public void OsmFilePath_SetValue_RoundTrips()
-        {
-            var loader = new OsmLevelLoader { OsmFilePath = "/some/path/map.osm" };
-            Assert.That(loader.OsmFilePath, Is.EqualTo("/some/path/map.osm"));
-        }
-
-        [Test]
-        public void ElevationCsvPath_SetValue_RoundTrips()
-        {
-            var loader = new OsmLevelLoader { ElevationCsvPath = "/some/path/map.elevation.csv" };
-            Assert.That(loader.ElevationCsvPath, Is.EqualTo("/some/path/map.elevation.csv"));
-        }
-
-        // ── Whitespace paths treated as empty ─────────────────────────────────
-
-        [Test]
-        public void Validate_WhiteSpaceOsmPath_ReportsEmptyError()
-        {
-            string csvPath = WriteTempFile("1,2,3,4,2,2\n1,1\n1,1\n", ".elevation.csv");
-            try
-            {
-                var loader = new OsmLevelLoader
-                {
-                    OsmFilePath      = "   ",
-                    ElevationCsvPath = csvPath,
-                };
-
-                var errors = loader.Validate();
-
-                Assert.That(errors, Has.Some.Contains("OSM file path must not be empty"));
-            }
-            finally { DeleteFile(csvPath); }
-        }
-
-        [Test]
-        public void Validate_WhiteSpaceCsvPath_ReportsEmptyError()
-        {
-            string osmPath = WriteTempFile("<osm/>", ".osm");
-            try
-            {
-                var loader = new OsmLevelLoader
-                {
-                    OsmFilePath      = osmPath,
-                    ElevationCsvPath = "   ",
-                };
-
-                var errors = loader.Validate();
-
-                Assert.That(errors, Has.Some.Contains("Elevation CSV path must not be empty"));
-            }
-            finally { DeleteFile(osmPath); }
+            var loader = new OsmLevelLoader { Radius = 1234 };
+            Assert.That(loader.Radius, Is.EqualTo(1234));
         }
     }
 }
