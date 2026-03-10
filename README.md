@@ -105,7 +105,7 @@ project file.
 - [x] Implement `GameManager` singleton with a `GameState` enum (`MainMenu`, `LoadingMap`, `GeneratingLevel`, `Racing`, `Paused`, `Results`).
 - [x] Expose `OnStateChanged` events so subsystems can react without tight coupling.
 - [x] Connect `GameManager` state transitions to the OSM loading and procedural generation pipeline via `MapSceneBuilder`.
-- [ ] Implement an in-editor **TerraDrive → Load OSM File / Generate Level** menu item.
+- [x] Implement an in-editor **TerraDrive → Load OSM File / Generate Level** menu item.
 - See [`Assets/Scripts/Core/GameManager.cs`](Assets/Scripts/Core/GameManager.cs) and [`Assets/Scripts/Core/MapSceneBuilder.cs`](Assets/Scripts/Core/MapSceneBuilder.cs).
 
 ### Phase 6 — Vehicle Physics ✅
@@ -160,6 +160,11 @@ project file.
       `-executeMethod TerraDrive.Editor.ProjectSetup.Configure`.
 - [x] Set physics gravity to `(0, -9.81, 0)` and register `Terrain` + `Road` user layers.
 - [x] Expose the same configuration as a **TerraDrive → Configure Project** menu item.
+- [x] Add a **TerraDrive → Load OSM File / Generate Level** menu item (see
+      [`Assets/Scripts/Editor/LoadOsmMenuEditor.cs`](Assets/Scripts/Editor/LoadOsmMenuEditor.cs)) —
+      opens file-picker dialogs for the `.osm` and `.elevation.csv` files, validates the
+      paths via `OsmLevelLoader`, configures the active scene's `MapSceneBuilder`, and
+      optionally enters Play mode.
 - [x] Add `release.yml` GitHub Actions workflow — push to the `release` branch runs tests,
       builds for Windows/macOS/Linux via `game-ci/unity-builder`, and publishes a GitHub Release.
 - See [`Assets/Scripts/Editor/ProjectSetup.cs`](Assets/Scripts/Editor/ProjectSetup.cs) and
@@ -192,6 +197,7 @@ They cover the following modules:
 | `MaterialRegistryTests.cs` | `MaterialRegistry` |
 | `SpeedometerTests.cs` | `Speedometer`, `SpeedometerHud` |
 | `MinimapRendererTests.cs` | `MinimapRenderer`, `MinimapLine` |
+| `OsmLevelLoaderTests.cs` | `OsmLevelLoader` (path settings & validation for the **TerraDrive → Load OSM File / Generate Level** editor menu item) |
 | `ChaseCamIntegrationTests.cs` | `ChaseCam` (integration, renders `chase-cam-preview.png`) |
 | `MapRendererIntegrationTests.cs` | `OSMParser` + `SplineGenerator` (integration, renders `map-preview.png`) |
 
@@ -295,6 +301,24 @@ standard TerraDrive settings:
 
 You can also run the same configuration interactively from the Unity menu bar:
 **TerraDrive → Configure Project**.
+
+### Load OSM File / Generate Level (interactive)
+
+Once the project is open in the Unity Editor, you can load a pre-downloaded OSM map
+and generate the level without touching the Inspector:
+
+1. Click **TerraDrive → Load OSM File / Generate Level** in the Unity menu bar.
+2. Select the `.osm` (or `.osm.xml`) data file in the file-picker dialog.
+3. Select the companion `.elevation.csv` file.
+4. TerraDrive validates both paths; if either file is missing an error dialog is shown.
+5. The active scene's `MapSceneBuilder` component is found (or created) and its
+   `OsmFilePath` / `ElevationCsvPath` fields are set automatically.
+6. A confirmation dialog asks whether to **Enter Play Mode** immediately.  Clicking
+   *Enter Play Mode* starts the `MapSceneBuilder` coroutine which drives the
+   `GameManager` through `LoadingMap → GeneratingLevel → Racing`.
+
+See [`Assets/Scripts/Editor/LoadOsmMenuEditor.cs`](Assets/Scripts/Editor/LoadOsmMenuEditor.cs)
+and [`Assets/Scripts/Core/OsmLevelLoader.cs`](Assets/Scripts/Core/OsmLevelLoader.cs).
 
 ---
 

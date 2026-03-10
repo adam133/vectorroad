@@ -150,6 +150,24 @@ The script configures the following defaults:
 You can also trigger the same setup interactively at any time from the Unity menu bar:
 **TerraDrive → Configure Project**.
 
+### 3b. Load an OSM map with the editor menu item
+
+If you have already downloaded an `.osm` file and companion `.elevation.csv` (see Step 2
+above), you can point the scene at them without opening the Inspector:
+
+1. Click **TerraDrive → Load OSM File / Generate Level** in the Unity menu bar.
+2. In the first file-picker, select your `.osm` (or `.osm.xml`) data file.
+3. In the second file-picker, select the companion `.elevation.csv` file.
+4. TerraDrive validates both paths.  If either file is missing, an error dialog is shown.
+5. The `MapSceneBuilder` component in the active scene is found (or created automatically)
+   and its **OsmFilePath** / **ElevationCsvPath** fields are updated.
+6. A confirmation dialog asks whether to **Enter Play Mode** immediately to generate the
+   level.  The scene is marked dirty; save it before entering play if you want to keep
+   the updated paths.
+
+This is the quickest way to try a new location — download the files with the CLI tool,
+then use the menu item to wire them into the scene in two clicks.
+
 The scene contains:
 - **Directional Light** — a sun-like light angled at (50°, −30°, 0°).
 - **GameManager** — the singleton state machine, defaulting to `MainMenu` state and centred on Ames, Iowa (41.8957, −93.5888) — the geographic origin of the bundled sample data.
@@ -279,6 +297,7 @@ Run the produced binary to play the game outside the editor.
 | Car physics + chase camera | ✅ Working |
 | Game state machine | ✅ Working |
 | CLI project create + configure (batch mode) | ✅ Working — `ProjectSetup.Configure` via `-executeMethod` |
+| Editor menu: Load OSM File / Generate Level | ✅ Working — **TerraDrive → Load OSM File / Generate Level** picks files, validates paths, wires `MapSceneBuilder`, and optionally enters Play mode |
 | Automated release builds (CI/CD) | ✅ Working — push to `release` branch triggers `release.yml` |
 | Texture ID → Material wiring | ✅ Working — `MaterialRegistry` scene component + `ProofOfConcept.unity` with all 25 texture slots |
 | Runtime scene assembly | ✅ Working — `MapSceneBuilder` loads OSM + elevation data on Play, instantiates terrain / road / building GameObjects, and drives the `GameManager` state machine (`LoadingMap → GeneratingLevel → Racing`); pre-wired in `ProofOfConcept.unity` |
