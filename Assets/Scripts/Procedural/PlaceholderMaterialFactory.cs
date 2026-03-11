@@ -94,16 +94,18 @@ namespace TerraDrive.Procedural
         /// </summary>
         internal static Material Create(string textureId)
         {
-            // Prefer the Standard shader; fall back to the legacy Diffuse shader if
-            // the project uses a custom render pipeline that does not ship Standard.
-            var shader = Shader.Find("Standard") ?? Shader.Find("Legacy Shaders/Diffuse");
+            // Prefer the Standard shader; fall back to progressively simpler built-in
+            // shaders so this works in the Built-in, URP, and HDRP render pipelines.
+            var shader = Shader.Find("Standard")
+                      ?? Shader.Find("Legacy Shaders/Diffuse")
+                      ?? Shader.Find("Unlit/Color");
+
             if (shader == null)
             {
                 Debug.LogWarning(
-                    "[PlaceholderMaterialFactory] Neither 'Standard' nor 'Legacy Shaders/Diffuse' " +
-                    "was found. Using an empty Material — colours will not be applied.");
-                var fallback = new Material(textureId) { name = textureId };
-                return fallback;
+                    "[PlaceholderMaterialFactory] No suitable shader found. " +
+                    "Placeholder colour will not be applied for: " + textureId);
+                return null;
             }
 
             var mat    = new Material(shader) { name = textureId };
