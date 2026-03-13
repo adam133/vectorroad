@@ -503,8 +503,8 @@ namespace TerraDrive.Core
             var root = new GameObject("BoxCar");
             var rb = root.AddComponent<Rigidbody>();
             rb.mass = 1200f;
-            rb.linearDamping = 0.5f;
-            rb.angularDamping = 5f;
+            rb.linearDamping = 0.1f;   // low drag → ~160 mph top speed
+            rb.angularDamping = 3f;
             rb.centerOfMass = new Vector3(0f, -0.3f, 0f);
 
             // Body (main visible cube)
@@ -551,8 +551,8 @@ namespace TerraDrive.Core
             {
                 var rb = vehicleRoot.AddComponent<Rigidbody>();
                 rb.mass = 1200f;
-                rb.linearDamping = 0.5f;
-                rb.angularDamping = 5f;
+                rb.linearDamping = 0.1f;
+                rb.angularDamping = 3f;
             }
 
             var controller = vehicleRoot.GetComponent<CarController>();
@@ -574,10 +574,10 @@ namespace TerraDrive.Core
             SetupWheel(controller, wheelRoot, "RearLeft", new Vector3(-0.9f, 0.35f, -1.35f), false);
             SetupWheel(controller, wheelRoot, "RearRight", new Vector3(0.9f, 0.35f, -1.35f), false);
 
-            controller.motorTorque = 2200f;
-            controller.brakeTorque = 3500f;
+            controller.motorTorque = 5500f;   // ~160 mph ceiling with 0.1 drag
+            controller.brakeTorque = 6000f;
             controller.maxSteerAngle = 28f;
-            controller.normalFriction = 1.3f;
+            controller.normalFriction = 1.5f;
             controller.driftFriction = 0.55f;
             controller.antiRollStiffness = 6500f;
         }
@@ -649,11 +649,11 @@ namespace TerraDrive.Core
             collider.suspensionSpring = suspension;
 
             WheelFrictionCurve forward = collider.forwardFriction;
-            forward.extremumSlip = 0.4f;
+            forward.extremumSlip = 0.5f;    // wider peak-grip band
             forward.extremumValue = 1f;
-            forward.asymptoteSlip = 0.8f;
-            forward.asymptoteValue = 0.75f;
-            forward.stiffness = 1.2f;
+            forward.asymptoteSlip = 1.0f;
+            forward.asymptoteValue = 0.8f;   // keep more drive force past the peak
+            forward.stiffness = 1.5f;
             collider.forwardFriction = forward;
 
             WheelFrictionCurve sideways = collider.sidewaysFriction;
