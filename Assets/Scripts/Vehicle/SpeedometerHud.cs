@@ -1,25 +1,29 @@
+using TMPro;
 using UnityEngine;
 
 namespace TerraDrive.Vehicle
 {
     /// <summary>
-    /// HUD component that reads the vehicle <see cref="Rigidbody"/> speed and exposes it
-    /// in miles per hour.  Attach to the same <c>GameObject</c> as
-    /// <see cref="CarController"/>.
-    ///
-    /// <para>
-    /// Connect <see cref="SpeedMph"/> or <see cref="RawSpeedMph"/> to a UI Text element
-    /// (e.g. via a <c>TextMeshPro</c> component) in a separate HUD script or via
-    /// Unity's <c>OnGUI</c> callback.
-    /// </para>
+    /// HUD component that reads the vehicle <see cref="Rigidbody"/> speed and drives a
+    /// <see cref="TMP_Text"/> label with the current speed in mph.
+    /// Attach to the same <c>GameObject</c> as <see cref="CarController"/>, then
+    /// assign <c>SpeedLabel</c> in the Inspector.
     /// </summary>
     public class SpeedometerHud : MonoBehaviour
     {
+        [SerializeField] private TMP_Text _speedLabel;
+
         private Rigidbody _rb;
 
         private void Awake()
         {
             _rb = GetComponent<Rigidbody>();
+        }
+
+        private void Update()
+        {
+            if (_speedLabel != null)
+                _speedLabel.text = $"{SpeedMph} mph";
         }
 
         /// <summary>Current vehicle speed in miles per hour (unrounded).</summary>
