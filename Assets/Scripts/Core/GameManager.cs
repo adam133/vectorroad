@@ -61,6 +61,30 @@ namespace TerraDrive.Core
         [Tooltip("Longitude of the map origin (world 0,0,0).")]
         public double OriginLongitude = -0.1278;
 
+        // ── Runtime file overrides ─────────────────────────────────────────────
+
+        /// <summary>
+        /// When set, <see cref="MapSceneBuilder"/> uses this path instead of its
+        /// inspector-configured <c>OsmFilePath</c> on the next scene load.
+        ///
+        /// Populated by <see cref="TerraDrive.Hud.CoordinateEntryHud"/> after a
+        /// successful in-game download so the reloaded scene picks up the new data.
+        /// Clear back to an empty string to restore the inspector default.
+        /// </summary>
+        [HideInInspector]
+        public string OsmFilePathOverride = string.Empty;
+
+        /// <summary>
+        /// When set, <see cref="MapSceneBuilder"/> uses this path instead of its
+        /// inspector-configured <c>ElevationCsvPath</c> on the next scene load.
+        ///
+        /// Populated by <see cref="TerraDrive.Hud.CoordinateEntryHud"/> after a
+        /// successful in-game download so the reloaded scene picks up the new data.
+        /// Clear back to an empty string to restore the inspector default.
+        /// </summary>
+        [HideInInspector]
+        public string ElevationFilePathOverride = string.Empty;
+
         // ── Unity lifecycle ────────────────────────────────────────────────────
 
         private void Awake()

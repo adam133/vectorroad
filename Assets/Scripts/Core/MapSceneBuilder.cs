@@ -99,6 +99,16 @@ namespace TerraDrive.Core
             string osmPath = ResolvePath(OsmFilePath);
             string csvPath = ResolvePath(ElevationCsvPath);
 
+            // Allow GameManager to override paths when new data was downloaded
+            // at runtime by CoordinateEntryHud before reloading the scene.
+            if (GameManager.Instance != null)
+            {
+                if (!string.IsNullOrEmpty(GameManager.Instance.OsmFilePathOverride))
+                    osmPath = GameManager.Instance.OsmFilePathOverride;
+                if (!string.IsNullOrEmpty(GameManager.Instance.ElevationFilePathOverride))
+                    csvPath = GameManager.Instance.ElevationFilePathOverride;
+            }
+
             GameManager.Instance?.SetState(GameState.LoadingMap);
             Debug.Log($"[MapSceneBuilder] Loading map: {osmPath}");
 
