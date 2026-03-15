@@ -84,7 +84,7 @@ TerrainMeshResult terrain = TerrainMeshGenerator.Generate(grid, originLat, origi
 
 // 3. Parse OSM — road nodes and building corners are lifted to terrain height.
 //    The same grid is reused as the IElevationSource; no extra HTTP calls.
-var (roads, buildings, region) = await OSMParser.ParseAsync(
+var (roads, buildings, waterBodies, region) = await OSMParser.ParseAsync(
     "Assets/Data/london.osm", originLat, originLon, grid);
 ```
 
