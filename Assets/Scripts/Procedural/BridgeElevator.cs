@@ -38,6 +38,14 @@ namespace TerraDrive.Procedural
         public const float DefaultRampFraction = 0.2f;
 
         /// <summary>
+        /// Maximum allowed grade for a bridge approach or departure ramp, expressed as a
+        /// fraction (0.15 = 15 %).  When the requested <see cref="DefaultRampFraction"/>
+        /// would produce a steeper ramp the fraction is automatically widened until the
+        /// grade constraint is satisfied.
+        /// </summary>
+        public const float MaxRampGrade = 0.15f;
+
+        /// <summary>
         /// Returns a new list of spline points with Y coordinates smoothly elevated to
         /// represent a bridge or overpass.
         ///
@@ -75,6 +83,18 @@ namespace TerraDrive.Procedural
 
             // Clamp rampFraction so neither ramp exceeds half the spline.
             rampFraction = Math.Clamp(rampFraction, 0f, 0.5f);
+
+            // Enforce the maximum ramp grade: rise / horizontal-run ≤ MaxRampGrade.
+            // Extend rampFraction if necessary so the ramp is long enough.
+            if (bridgeHeight > 0f)
+            {
+                float totalLength = ComputeXZLength(splinePoints);
+                if (totalLength > 0f)
+                {
+                    float minRampFraction = (bridgeHeight / MaxRampGrade) / totalLength;
+                    rampFraction = Math.Max(rampFraction, Math.Clamp(minRampFraction, 0f, 0.5f));
+                }
+            }
 
             int n = splinePoints.Count;
             var result = new List<Vector3>(n);
@@ -119,6 +139,22 @@ namespace TerraDrive.Procedural
 
             // Middle span — fully elevated.
             return 1f;
+        }
+
+        /// <summary>
+        /// Returns the total arc length of <paramref name="points"/> projected onto the
+        /// XZ plane, ignoring the Y (elevation) component.  Used for grade calculations.
+        /// </summary>
+        private static float ComputeXZLength(IList<Vector3> points)
+        {
+            float total = 0f;
+            for (int i = 1; i < points.Count; i++)
+            {
+                float dx = points[i].x - points[i - 1].x;
+                float dz = points[i].z - points[i - 1].z;
+                total += (float)Math.Sqrt(dx * dx + dz * dz);
+            }
+            return total;
         }
 
         /// <summary>

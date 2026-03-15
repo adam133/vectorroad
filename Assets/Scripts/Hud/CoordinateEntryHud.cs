@@ -291,6 +291,10 @@ namespace TerraDrive.Hud
 
                 // 4. Reload the active scene — MapSceneBuilder will pick up the
                 //    new file paths from GameManager and rebuild everything.
+                // Hide the dialog before reloading so it doesn't persist on the
+                // GameManager object into the freshly loaded scene.
+                _isVisible = false;
+                _isLoading = false;
                 SceneManager.LoadScene(SceneManager.GetActiveScene().name);
             }
             catch (OperationCanceledException)

@@ -116,6 +116,8 @@ namespace TerraDrive.Vehicle
 
         private void ApplyMotorAndBrake(float throttle, bool handbrake)
         {
+            const float ReverseEngageSpeed = 0.5f; // m/s — engage reverse once nearly stopped
+
             if (handbrake)
             {
                 // Handbrake: release motor torque, lock rear wheels.
@@ -128,14 +130,25 @@ namespace TerraDrive.Vehicle
             }
             else if (throttle < 0f)
             {
-                // Braking
-                float bt = Mathf.Abs(throttle) * brakeTorque;
-                SetBrakeOnAll(bt);
-                SetMotorOnRear(0f);
+                // S held: brake first; engage reverse only once nearly stopped.
+                float localVelocityZ = _rb.transform.InverseTransformDirection(_rb.linearVelocity).z;
+                if (localVelocityZ > ReverseEngageSpeed)
+                {
+                    // Still moving forward — apply brakes.
+                    float bt = Mathf.Abs(throttle) * brakeTorque;
+                    SetBrakeOnAll(bt);
+                    SetMotorOnRear(0f);
+                }
+                else
+                {
+                    // Slow enough — engage reverse motor torque.
+                    SetBrakeOnAll(0f);
+                    SetMotorOnRear(throttle * motorTorque); // throttle is negative → reverse torque
+                }
             }
             else
             {
-                // Driving
+                // Driving forward.
                 SetBrakeOnAll(0f);
                 SetMotorOnRear(throttle * motorTorque);
             }

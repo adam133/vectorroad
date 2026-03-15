@@ -215,13 +215,16 @@ namespace TerraDrive.Tests
         [Test]
         public void ApplyElevation_MiddleSectionIsFlat()
         {
-            List<Vector3> spline = StraightSpline(101);
+            // Use 201 points (200 m spline) so the default 20 % ramp (40 m) gives a
+            // ~11.25 % grade — comfortably below the 15 % limit — and the ramp fraction
+            // is not automatically extended by the grade cap.
+            List<Vector3> spline = StraightSpline(201);
             const float height = BridgeElevator.DefaultBridgeHeight;
             const float ramp = BridgeElevator.DefaultRampFraction;
             List<Vector3> result = BridgeElevator.ApplyElevation(spline, bridgeHeight: height, rampFraction: ramp);
 
-            int midStart = (int)(100 * ramp) + 1;
-            int midEnd   = 100 - (int)(100 * ramp) - 1;
+            int midStart = (int)(200 * ramp) + 1;
+            int midEnd   = 200 - (int)(200 * ramp) - 1;
 
             for (int i = midStart; i <= midEnd; i++)
                 Assert.That(result[i].y, Is.EqualTo(height).Within(1e-4f),
@@ -292,6 +295,55 @@ namespace TerraDrive.Tests
             float factor = BridgeElevator.ComputeElevationFactor(1f - ramp, ramp);
 
             Assert.That(factor, Is.EqualTo(1f).Within(1e-5f));
+        }
+
+        // ── Grade-limit enforcement ───────────────────────────────────────────
+
+        [Test]
+        public void MaxRampGrade_Is15Percent()
+        {
+            Assert.That(BridgeElevator.MaxRampGrade, Is.EqualTo(0.15f).Within(1e-6f));
+        }
+
+        [Test]
+        public void ApplyElevation_GradeLimit_RampExtendedWhenSplineIsTooShort()
+        {
+            // 21-point spline = 20 m horizontal length.
+            // Default rampFraction = 0.2 → 4 m ramp → grade = 4.5 / 4 = 112.5 %,
+            // far above the 15 % limit.
+            // Minimum ramp length = 4.5 / 0.15 = 30 m, but the spline is only 20 m,
+            // so rampFraction is clamped to 0.5 (10 m each side).
+            // At the original ramp end (index 4, t = 0.2) the point must still be
+            // climbing the approach ramp — NOT yet at full height.
+            List<Vector3> spline = StraightSpline(21);
+            const float height = BridgeElevator.DefaultBridgeHeight;
+
+            List<Vector3> result = BridgeElevator.ApplyElevation(
+                spline, bridgeHeight: height, rampFraction: BridgeElevator.DefaultRampFraction);
+
+            Assert.That(result[4].y, Is.LessThan(height),
+                "Point at the original 20 % ramp end must still be climbing when " +
+                "the grade cap has extended the ramp.");
+        }
+
+        [Test]
+        public void ApplyElevation_GradeLimit_RampNotExtendedWhenGradeAlreadyWithinLimit()
+        {
+            // 301-point spline = 300 m horizontal length.
+            // Default rampFraction = 0.2 → 60 m ramp → grade = 4.5 / 60 = 7.5 %,
+            // well below the 15 % limit.  rampFraction must not be changed.
+            List<Vector3> spline = StraightSpline(301);
+            const float height = BridgeElevator.DefaultBridgeHeight;
+            const float ramp   = BridgeElevator.DefaultRampFraction;
+
+            List<Vector3> result = BridgeElevator.ApplyElevation(
+                spline, bridgeHeight: height, rampFraction: ramp);
+
+            // End of the requested ramp is at index 60 (t = 60/300 = 0.2 = rampFraction).
+            // SmoothStep(1) = 1, so the point must be at full bridge height.
+            Assert.That(result[60].y, Is.EqualTo(height).Within(1e-4f),
+                "When the requested ramp already satisfies the grade limit the " +
+                "fraction must not be extended.");
         }
     }
 }

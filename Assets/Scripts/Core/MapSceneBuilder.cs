@@ -246,8 +246,12 @@ namespace TerraDrive.Core
                 (int)(road.WayId & int.MaxValue));
             var terrainAlignedSpline = ClampRoadSplineToTerrain(deformedSpline, terrainMesh, elevationGrid);
 
+            System.Collections.Generic.IList<Vector3> finalSpline = road.IsBridge
+                ? BridgeElevator.ApplyElevation(terrainAlignedSpline)
+                : terrainAlignedSpline;
+
             RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
-                terrainAlignedSpline, roadType, region: region,
+                finalSpline, roadType, region: region,
                 lanes: road.Lanes,
                 isOneWay: road.IsOneWay);
 
@@ -472,7 +476,7 @@ namespace TerraDrive.Core
             // Auto-create a SpeedLabel in the bottom-right of the canvas if still not found.
             if (SpeedLabel == null)
             {
-                var canvas = FindFirstObjectByType<Canvas>();
+                var canvas = GetOrCreateHudCanvas();
                 if (canvas != null)
                 {
                     var speedLabelGo = new GameObject("SpeedLabel");
@@ -510,7 +514,7 @@ namespace TerraDrive.Core
                 MinimapImage = FindFirstObjectByType<RawImage>();
             if (MinimapImage == null)
             {
-                var canvas = FindFirstObjectByType<Canvas>();
+                var canvas = GetOrCreateHudCanvas();
                 if (canvas != null)
                 {
                     var minimapGo = new GameObject("MinimapDisplay");
@@ -830,6 +834,31 @@ namespace TerraDrive.Core
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns a dedicated HUD <see cref="Canvas"/> that is separate from any
+        /// menu canvases and will never be hidden by <see cref="StartupMenuUi"/>.
+        /// Creates the canvas the first time it is needed.
+        /// </summary>
+        private static Canvas GetOrCreateHudCanvas()
+        {
+            var existing = GameObject.Find("HudCanvas");
+            if (existing != null)
+                return existing.GetComponent<Canvas>();
+
+            var go     = new GameObject("HudCanvas");
+            var canvas = go.AddComponent<Canvas>();
+            canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 1;
+
+            var scaler = go.AddComponent<UnityEngine.UI.CanvasScaler>();
+            scaler.uiScaleMode         = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight  = 0.5f;
+
+            go.AddComponent<UnityEngine.UI.GraphicRaycaster>();
+            return canvas;
+        }
 
         /// <summary>
         /// Resolves a file path.  Absolute paths are returned unchanged.
