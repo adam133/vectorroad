@@ -64,7 +64,7 @@ dotnet run --project Tools/OsmDownloader -- --lat 51.5074 --lon -0.1278 --radius
 
 The tool writes a standard `.osm` XML file to the path specified by `--output` (directories are created automatically).
 
-When `--elevation` is supplied, a companion `<name>.elevation.csv` file is written to the same directory.  The CSV format is:
+By default, a companion `<name>.elevation.csv` file is written to the same directory.  The CSV format is:
 
 ```
 minLat,maxLat,minLon,maxLon,rows,cols
@@ -109,6 +109,9 @@ The downloader uses the following Overpass QL template, which fetches:
 
 - All **highway** ways (roads, paths, etc.)
 - All **building** ways (footprints for procedural extrusion)
+- All **waterway** ways (rivers, canals, docks)
+- All **natural=water** ways (lakes, ponds, reservoirs)
+- All **water** ways (additional water polygon variants)
 - All nodes referenced by those ways
 
 ```
@@ -116,6 +119,9 @@ The downloader uses the following Overpass QL template, which fetches:
 (
   way["highway"](around:<radius>,<lat>,<lon>);
   way["building"](around:<radius>,<lat>,<lon>);
+  way["waterway"](around:<radius>,<lat>,<lon>);
+  way["natural"="water"](around:<radius>,<lat>,<lon>);
+  way["water"](around:<radius>,<lat>,<lon>);
 );
 (._;>;);
 out body;
