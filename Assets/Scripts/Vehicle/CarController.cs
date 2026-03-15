@@ -74,8 +74,8 @@ namespace TerraDrive.Vehicle
                 return;
 
             float throttle = Input.GetAxis("Vertical");
-            float steer = Input.GetAxis("Horizontal");
-            bool handbrake = Input.GetKey(KeyCode.Space);
+            float steer    = Input.GetAxis("Horizontal");
+            bool  handbrake = Input.GetKey(KeyCode.Space);
 
             ApplySteering(steer);
             ApplyMotorAndBrake(throttle, handbrake);

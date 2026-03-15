@@ -279,6 +279,9 @@ namespace TerraDrive.Hud
 
                 // 3. Update GameManager so the reloaded scene uses the new data.
                 SetStatus("Reloading scene…");
+                // Clear the cached Mercator world origin so the new coordinate
+                // maps cleanly to (0, 0, 0) on reload — mirrors LocationMenuController.
+                CoordinateConverter.ResetWorldOrigin();
                 if (GameManager.Instance != null)
                 {
                     GameManager.Instance.SetLocation(lat, lon);

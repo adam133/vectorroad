@@ -1,8 +1,11 @@
 using System.Collections;
 using System.IO;
 using System.Threading;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using TerraDrive.DataInversion;
+using TerraDrive.Hud;
 using TerraDrive.Procedural;
 using TerraDrive.Terrain;
 using TerraDrive.Vehicle;
@@ -66,6 +69,15 @@ namespace TerraDrive.Core
         [Tooltip("Height above world origin (metres) at which the vehicle is placed.")]
         public float VehicleSpawnHeight = 2f;
 
+        [Tooltip("TMP_Text label on the HUD Canvas that shows the current speed. Drag the SpeedLabel object here.")]
+        public TMP_Text SpeedLabel;
+
+        [Tooltip("RawImage on the HUD Canvas for the minimap. Drag the minimap RawImage here.")]
+        public RawImage MinimapImage;
+
+        [Tooltip("CoordinateEntryHud component. Leave empty to auto-create on the GameManager.")]
+        public CoordinateEntryHud CoordHud;
+
         // ── Private state ──────────────────────────────────────────────────────
 
         private CancellationTokenSource _cts;
@@ -75,7 +87,38 @@ namespace TerraDrive.Core
         private void Start()
         {
             _cts = new CancellationTokenSource();
-            StartCoroutine(LoadAndBuildRoutine(_cts.Token));
+
+            if (GameManager.Instance?.CurrentState == GameState.MainMenu)
+            {
+                // Show the startup menu and wait for the player's choice before
+                // any map data is loaded.  Create the menu component if it isn't
+                // already present in the scene (e.g. from a previous run).
+                if (FindFirstObjectByType<StartupMenuUi>() == null)
+                {
+                    var menuHost = new GameObject("StartupMenuUi");
+                    menuHost.AddComponent<StartupMenuUi>();
+                }
+                StartCoroutine(WaitForMenuThenBuild(_cts.Token));
+            }
+            else
+            {
+                StartCoroutine(LoadAndBuildRoutine(_cts.Token));
+            }
+        }
+
+        /// <summary>
+        /// Stalls the build pipeline until the player dismisses the startup menu
+        /// by transitioning the game state away from <see cref="GameState.MainMenu"/>.
+        /// </summary>
+        private IEnumerator WaitForMenuThenBuild(CancellationToken ct)
+        {
+            yield return new WaitUntil(() =>
+                ct.IsCancellationRequested ||
+                GameManager.Instance == null ||
+                GameManager.Instance.CurrentState != GameState.MainMenu);
+
+            if (!ct.IsCancellationRequested)
+                yield return StartCoroutine(LoadAndBuildRoutine(ct));
         }
 
         private void OnDestroy()
@@ -99,12 +142,18 @@ namespace TerraDrive.Core
             string osmPath = ResolvePath(OsmFilePath);
             string csvPath = ResolvePath(ElevationCsvPath);
 
-            // Allow GameManager to override paths when new data was downloaded
+            // Allow GameManager to override paths and origin when new data was downloaded
             // at runtime by CoordinateEntryHud before reloading the scene.
             if (GameManager.Instance != null)
             {
                 if (!string.IsNullOrEmpty(GameManager.Instance.OsmFilePathOverride))
+                {
                     osmPath = GameManager.Instance.OsmFilePathOverride;
+                    // The downloaded location becomes the new map origin — override the
+                    // inspector values so the scene is centred on the correct coordinates.
+                    originLat = GameManager.Instance.OriginLatitude;
+                    originLon = GameManager.Instance.OriginLongitude;
+                }
                 if (!string.IsNullOrEmpty(GameManager.Instance.ElevationFilePathOverride))
                     csvPath = GameManager.Instance.ElevationFilePathOverride;
             }
@@ -165,6 +214,9 @@ namespace TerraDrive.Core
         {
             var go   = new GameObject("Terrain");
             var mesh = new Mesh { name = "TerrainMesh" };
+            // Use 32-bit indices so terrain meshes with more than 65 535 vertices
+            // (radius > ~3 500 m at SRTM 30 m spacing) are not silently truncated.
+            mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
             mesh.vertices  = map.TerrainMesh.Vertices;
             mesh.triangles = map.TerrainMesh.Triangles;
             mesh.uv        = map.TerrainMesh.UVs;
@@ -407,6 +459,91 @@ namespace TerraDrive.Core
                 if (cam == null)
                     cam = Camera.main.gameObject.AddComponent<ChaseCam>();
                 cam.target = Vehicle;
+            }
+
+            // Auto-find SpeedLabel if not wired in the Inspector.
+            if (SpeedLabel == null)
+            {
+                var go = GameObject.Find("SpeedLabel");
+                if (go != null)
+                    SpeedLabel = go.GetComponent<TMP_Text>();
+            }
+
+            // Auto-create a SpeedLabel in the bottom-right of the canvas if still not found.
+            if (SpeedLabel == null)
+            {
+                var canvas = FindFirstObjectByType<Canvas>();
+                if (canvas != null)
+                {
+                    var speedLabelGo = new GameObject("SpeedLabel");
+                    speedLabelGo.transform.SetParent(canvas.transform, false);
+                    speedLabelGo.layer = canvas.gameObject.layer;
+                    var rt = speedLabelGo.AddComponent<RectTransform>();
+                    rt.anchorMin        = new Vector2(1f, 0f);
+                    rt.anchorMax        = new Vector2(1f, 0f);
+                    rt.pivot            = new Vector2(1f, 0f);
+                    rt.anchoredPosition = new Vector2(-20f, 20f);
+                    rt.sizeDelta        = new Vector2(200f, 60f);
+                    var tmp = speedLabelGo.AddComponent<TextMeshProUGUI>();
+                    tmp.fontSize  = 36f;
+                    tmp.alignment = TextAlignmentOptions.BottomRight;
+                    tmp.color     = Color.white;
+                    SpeedLabel = tmp;
+                }
+            }
+
+            // Wire the speedometer HUD label to the vehicle.
+            if (SpeedLabel != null)
+            {
+                var hud = Vehicle.GetComponent<SpeedometerHud>();
+                if (hud == null)
+                    hud = Vehicle.gameObject.AddComponent<SpeedometerHud>();
+                hud.Init(SpeedLabel);
+            }
+            else
+            {
+                Debug.LogWarning("[MapSceneBuilder] SpeedLabel not assigned and no GameObject named 'SpeedLabel' found — speedometer will be hidden.");
+            }
+
+            // Auto-find or auto-create the minimap RawImage.
+            if (MinimapImage == null)
+                MinimapImage = FindFirstObjectByType<RawImage>();
+            if (MinimapImage == null)
+            {
+                var canvas = FindFirstObjectByType<Canvas>();
+                if (canvas != null)
+                {
+                    var minimapGo = new GameObject("MinimapDisplay");
+                    minimapGo.transform.SetParent(canvas.transform, false);
+                    minimapGo.layer = canvas.gameObject.layer;
+                    var rt = minimapGo.AddComponent<RectTransform>();
+                    rt.anchorMin    = new Vector2(0f, 0f);
+                    rt.anchorMax    = new Vector2(0f, 0f);
+                    rt.pivot        = new Vector2(0f, 0f);
+                    rt.anchoredPosition = new Vector2(20f, 20f);
+                    rt.sizeDelta    = new Vector2(180f, 180f);
+                    MinimapImage = minimapGo.AddComponent<RawImage>();
+                    MinimapImage.color = Color.white;
+                }
+            }
+
+            // Wire the minimap.
+            if (MinimapImage != null)
+            {
+                var minimap = GetComponent<MinimapHud>();
+                if (minimap == null)
+                    minimap = gameObject.AddComponent<MinimapHud>();
+                minimap.Target = MinimapImage;
+                minimap.Init(Vehicle, map.Roads);
+            }
+
+            // Ensure a CoordinateEntryHud is active in the scene.
+            if (CoordHud == null)
+                CoordHud = FindFirstObjectByType<CoordinateEntryHud>();
+            if (CoordHud == null)
+            {
+                var host = GameManager.Instance != null ? GameManager.Instance.gameObject : gameObject;
+                CoordHud = host.AddComponent<CoordinateEntryHud>();
             }
         }
 

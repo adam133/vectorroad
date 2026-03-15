@@ -22,6 +22,9 @@ namespace TerraDrive.Tools
             "(",
             "  way[\"highway\"](around:{radius},{lat},{lon});",
             "  way[\"building\"](around:{radius},{lat},{lon});",
+            "  way[\"waterway\"](around:{radius},{lat},{lon});",
+            "  way[\"natural\"=\"water\"](around:{radius},{lat},{lon});",
+            "  way[\"water\"](around:{radius},{lat},{lon});",
             ");",
             "(._;>;);",
             "out body;");
@@ -62,7 +65,7 @@ namespace TerraDrive.Tools
                     await _httpClient.PostAsync(_overpassUrl, formData, cancellationToken)
                                      .ConfigureAwait(false);
 
-                if ((int)response.StatusCode == 429)
+                if ((int)response.StatusCode is 429 or 502 or 504)
                 {
                     if (attempt == MaxRetries)
                         response.EnsureSuccessStatusCode();

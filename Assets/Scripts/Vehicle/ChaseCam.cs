@@ -59,12 +59,14 @@ namespace TerraDrive.Vehicle
 
             // Look at a point slightly ahead of the target for more natural framing
             Vector3 lookAt = target.position + target.forward * lookAheadDistance;
-            Quaternion desiredRotation = Quaternion.LookRotation(
-                (lookAt - transform.position).normalized, Vector3.up);
-
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation, desiredRotation,
-                Time.deltaTime * rotationDamping);
+            Vector3 lookDir = lookAt - transform.position;
+            if (lookDir.sqrMagnitude > 0.001f)
+            {
+                Quaternion desiredRotation = Quaternion.LookRotation(lookDir.normalized, Vector3.up);
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation, desiredRotation,
+                    Time.deltaTime * rotationDamping);
+            }
         }
     }
 }

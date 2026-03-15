@@ -81,6 +81,30 @@ namespace TerraDrive.Tests
         }
 
         [Test]
+        public void BuildQuery_ContainsWaterwayFilter()
+        {
+            string q = OsmDownloader.BuildQuery(0.0, 0.0, 500);
+
+            Assert.That(q, Does.Contain("way[\"waterway\"]"));
+        }
+
+        [Test]
+        public void BuildQuery_ContainsNaturalWaterFilter()
+        {
+            string q = OsmDownloader.BuildQuery(0.0, 0.0, 500);
+
+            Assert.That(q, Does.Contain("way[\"natural\"=\"water\"]"));
+        }
+
+        [Test]
+        public void BuildQuery_ContainsWaterTagFilter()
+        {
+            string q = OsmDownloader.BuildQuery(0.0, 0.0, 500);
+
+            Assert.That(q, Does.Contain("way[\"water\"]"));
+        }
+
+        [Test]
         public void BuildQuery_ContainsRecurseDown()
         {
             string q = OsmDownloader.BuildQuery(0.0, 0.0, 500);
@@ -229,6 +253,41 @@ namespace TerraDrive.Tests
         }
 
         [Test]
+        public async Task DownloadOsmAsync_504ThenSuccess_RetriesAndReturnsXml()
+        {
+            int callCount = 0;
+            var handler = MakeHandler(_ =>
+            {
+                callCount++;
+                if (callCount == 1)
+                    return new HttpResponseMessage(HttpStatusCode.GatewayTimeout);
+
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(SampleOverpassXml, Encoding.UTF8, "application/xml"),
+                };
+            });
+
+            var downloader = new InstantRetryOsmDownloader(new HttpClient(handler));
+
+            string result = await downloader.DownloadOsmAsync(51.5, -0.1, 1000);
+
+            Assert.That(result, Is.EqualTo(SampleOverpassXml));
+            Assert.That(callCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void DownloadOsmAsync_AllRetriesExhaustedOn504_ThrowsHttpRequestException()
+        {
+            var handler = MakeHandler(_ => new HttpResponseMessage(HttpStatusCode.GatewayTimeout));
+
+            var downloader = new InstantRetryOsmDownloader(new HttpClient(handler));
+
+            Assert.ThrowsAsync<HttpRequestException>(
+                () => downloader.DownloadOsmAsync(51.5, -0.1, 1000));
+        }
+
+        [Test]
         public async Task DownloadOsmAsync_RetryAfterHeader_IsRespected()
         {
             int callCount = 0;
@@ -300,7 +359,7 @@ namespace TerraDrive.Tests
             Assert.ThrowsAsync<HttpRequestException>(
                 () => downloader.DownloadOsmAsync(51.5, -0.1, 1000));
 
-            Assert.That(callCount, Is.EqualTo(1), "Non-429 errors must not be retried.");
+            Assert.That(callCount, Is.EqualTo(1), "Non-transient errors must not be retried.");
         }
 
         [Test]
