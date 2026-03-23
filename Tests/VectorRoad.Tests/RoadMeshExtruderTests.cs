@@ -297,7 +297,8 @@ namespace VectorRoad.Tests
         public void ExtrudeWithDetails_KerbMesh_CorrectVertexCount()
         {
             // 4 kerb vertices per spline point: left-outer, left-inner, right-inner, right-outer
-            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+            // Urban road types (Residential, Service) receive a raised kerb.
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Residential);
 
             Assert.That(result.KerbMesh.Vertices.Length, Is.EqualTo(TwoPoints.Count * 4));
         }
@@ -306,7 +307,8 @@ namespace VectorRoad.Tests
         public void ExtrudeWithDetails_KerbMesh_CorrectTriangleCount()
         {
             // (n-1) segments × 2 kerb strips × 2 triangles × 3 indices = (n-1) × 12
-            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+            // Urban road types (Residential, Service) receive a raised kerb.
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Residential);
 
             Assert.That(result.KerbMesh.Triangles.Length, Is.EqualTo((TwoPoints.Count - 1) * 12));
         }
@@ -513,13 +515,17 @@ namespace VectorRoad.Tests
         }
 
         [Test]
-        public void ExtrudeWithDetails_WithLanes_MeshWidthReflectsLaneCount()
+        public void ExtrudeWithDetails_WithLanes_MeshWidthReflectsLaneCountAndShoulder()
         {
+            // Formula: (lanes × DefaultLaneWidth + shoulderWidth) × regionFactor
+            // Primary shoulder = 3.0 m; Unknown region factor = 1.0
             const int lanes = 3;
-            float expectedWidth = lanes * RoadMeshExtruder.DefaultLaneWidth;
+            const RoadType roadType = RoadType.Primary;
+            float expectedWidth = lanes * RoadMeshExtruder.DefaultLaneWidth
+                                  + RegionWidthFactors.GetShoulderWidth(roadType);
 
             RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
-                TwoPoints, RoadType.Primary, lanes: lanes);
+                TwoPoints, roadType, lanes: lanes);
 
             float actual = result.RoadMesh.Vertices[1].x - result.RoadMesh.Vertices[0].x;
             Assert.That(actual, Is.EqualTo(expectedWidth).Within(1e-4f));
@@ -582,6 +588,412 @@ namespace VectorRoad.Tests
 
                 Assert.That(result.LaneMarkingTextureId, Is.Not.Null.And.Not.Empty,
                     $"LaneMarkingTextureId must not be empty for road type '{rt}'.");
+            }
+        }
+
+        // ── Region-based width factor ─────────────────────────────────────────
+
+        [Test]
+        public void GetWidthForRoadType_TemperateNorthAmerica_WiderThanTemperate()
+        {
+            // USA/Canada roads are wider than European roads of the same type.
+            float na     = RoadMeshExtruder.GetWidthForRoadType(RoadType.Primary, 0, RegionType.TemperateNorthAmerica);
+            float europe = RoadMeshExtruder.GetWidthForRoadType(RoadType.Primary, 0, RegionType.Temperate);
+
+            Assert.That(na, Is.GreaterThan(europe),
+                "North American roads should be wider than their European counterparts.");
+        }
+
+        [Test]
+        public void GetWidthForRoadType_WithRegion_ZeroLanes_AppliesRegionFactorToTableWidth()
+        {
+            // Zero lanes falls back to the table value, then multiplies by the region factor.
+            float baseWidth = RoadMeshExtruder.GetWidthForRoadType(RoadType.Secondary);
+            float naFactor  = RegionWidthFactors.GetWidthFactor(RegionType.TemperateNorthAmerica);
+            float expected  = baseWidth * naFactor;
+
+            float actual = RoadMeshExtruder.GetWidthForRoadType(
+                RoadType.Secondary, 0, RegionType.TemperateNorthAmerica);
+
+            Assert.That(actual, Is.EqualTo(expected).Within(1e-4f));
+        }
+
+        [Test]
+        public void GetWidthForRoadType_WithRegion_Lanes_AppliesShoulderAndRegionFactor()
+        {
+            const int lanes          = 2;
+            const RoadType roadType  = RoadType.Motorway;
+            const RegionType region  = RegionType.TemperateNorthAmerica;
+
+            float shoulder = RegionWidthFactors.GetShoulderWidth(roadType);
+            float factor   = RegionWidthFactors.GetWidthFactor(region);
+            float expected = (lanes * RoadMeshExtruder.DefaultLaneWidth + shoulder) * factor;
+
+            float actual = RoadMeshExtruder.GetWidthForRoadType(roadType, lanes, region);
+
+            Assert.That(actual, Is.EqualTo(expected).Within(1e-4f));
+        }
+
+        [Test]
+        public void GetWidthForRoadType_UnknownRegion_SameAsBaseline()
+        {
+            // RegionType.Unknown factor is 1.0 — identical to Temperate.
+            float unknown   = RoadMeshExtruder.GetWidthForRoadType(RoadType.Residential, 0, RegionType.Unknown);
+            float temperate = RoadMeshExtruder.GetWidthForRoadType(RoadType.Residential, 0, RegionType.Temperate);
+
+            Assert.That(unknown, Is.EqualTo(temperate).Within(1e-4f));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_NorthAmerica_ProducesWiderMeshThanTemperate()
+        {
+            RoadMeshResult na     = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Primary, region: RegionType.TemperateNorthAmerica);
+            RoadMeshResult europe = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Primary, region: RegionType.Temperate);
+
+            float naWidth     = na.RoadMesh.Vertices[1].x     - na.RoadMesh.Vertices[0].x;
+            float europeWidth = europe.RoadMesh.Vertices[1].x - europe.RoadMesh.Vertices[0].x;
+
+            Assert.That(naWidth, Is.GreaterThan(europeWidth),
+                "North American road mesh must be wider than European mesh of the same type.");
+        }
+
+        [Test]
+        public void GetWidthFactor_AllRegions_ReturnPositiveValue()
+        {
+            foreach (RegionType region in System.Enum.GetValues(typeof(RegionType)))
+                Assert.That(RegionWidthFactors.GetWidthFactor(region), Is.GreaterThan(0f),
+                    $"Width factor for region '{region}' must be positive.");
+        }
+
+        [Test]
+        public void GetShoulderWidth_AllRoadTypes_ReturnNonNegativeValue()
+        {
+            foreach (RoadType rt in System.Enum.GetValues(typeof(RoadType)))
+                Assert.That(RegionWidthFactors.GetShoulderWidth(rt), Is.GreaterThanOrEqualTo(0f),
+                    $"Shoulder width for road type '{rt}' must be non-negative.");
+        }
+
+        [Test]
+        public void GetShoulderWidth_Motorway_WidestShoulder()
+        {
+            float motorway    = RegionWidthFactors.GetShoulderWidth(RoadType.Motorway);
+            float residential = RegionWidthFactors.GetShoulderWidth(RoadType.Residential);
+
+            Assert.That(motorway, Is.GreaterThan(residential),
+                "Motorway shoulders must be wider than residential shoulders.");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_WithLanes_NorthAmerica_WiderThanEurope()
+        {
+            RoadMeshResult na     = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Primary, region: RegionType.TemperateNorthAmerica, lanes: 4);
+            RoadMeshResult europe = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Primary, region: RegionType.Temperate, lanes: 4);
+
+            float naWidth     = na.RoadMesh.Vertices[1].x     - na.RoadMesh.Vertices[0].x;
+            float europeWidth = europe.RoadMesh.Vertices[1].x - europe.RoadMesh.Vertices[0].x;
+
+            Assert.That(naWidth, Is.GreaterThan(europeWidth),
+                "4-lane North American road must be wider than 4-lane European road.");
+        }
+
+        // ── IsUrbanRoadType ───────────────────────────────────────────────────
+
+        [Test]
+        public void IsUrbanRoadType_Residential_IsTrue()
+        {
+            Assert.That(RoadMeshExtruder.IsUrbanRoadType(RoadType.Residential), Is.True);
+        }
+
+        [Test]
+        public void IsUrbanRoadType_Service_IsTrue()
+        {
+            Assert.That(RoadMeshExtruder.IsUrbanRoadType(RoadType.Service), Is.True);
+        }
+
+        [Test]
+        public void IsUrbanRoadType_Primary_IsFalse()
+        {
+            Assert.That(RoadMeshExtruder.IsUrbanRoadType(RoadType.Primary), Is.False);
+        }
+
+        [Test]
+        public void IsUrbanRoadType_Motorway_IsFalse()
+        {
+            Assert.That(RoadMeshExtruder.IsUrbanRoadType(RoadType.Motorway), Is.False);
+        }
+
+        [Test]
+        public void IsUrbanRoadType_Dirt_IsFalse()
+        {
+            Assert.That(RoadMeshExtruder.IsUrbanRoadType(RoadType.Dirt), Is.False);
+        }
+
+        // ── Urban kerb height (15 cm) ─────────────────────────────────────────
+
+        [Test]
+        public void ExtrudeWithDetails_Residential_KerbHeight_IsUrbanKerbHeight()
+        {
+            // Residential roads use the 15 cm urban kerb.
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Residential);
+
+            float expectedY = RoadMeshExtruder.TerrainClearance + RoadMeshExtruder.UrbanKerbHeight;
+            foreach (var v in result.KerbMesh.Vertices)
+                Assert.That(v.y, Is.EqualTo(expectedY).Within(1e-4f),
+                    "Residential kerb vertices must be at UrbanKerbHeight above the road plane.");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Service_HasNonEmptyKerbMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Service);
+
+            Assert.That(result.KerbMesh.Vertices.Length, Is.GreaterThan(0),
+                "Service road (urban) must have a raised kerb mesh.");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_UrbanKerbHeight_GreaterThanDefaultKerbHeight()
+        {
+            Assert.That(RoadMeshExtruder.UrbanKerbHeight, Is.GreaterThan(RoadMeshExtruder.DefaultKerbHeight),
+                "UrbanKerbHeight (15 cm) must be larger than the legacy DefaultKerbHeight (5 cm).");
+        }
+
+        // ── Rural road ditches ────────────────────────────────────────────────
+
+        [Test]
+        public void ExtrudeWithDetails_Primary_HasDitchMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+
+            Assert.That(result.DitchMesh, Is.Not.Null,
+                "Primary road (rural) must have a roadside ditch mesh.");
+            Assert.That(result.DitchMesh!.Vertices.Length, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Motorway_HasDitchMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Motorway);
+
+            Assert.That(result.DitchMesh, Is.Not.Null);
+            Assert.That(result.DitchMesh!.Vertices.Length, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Dirt_HasDitchMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Dirt);
+
+            Assert.That(result.DitchMesh, Is.Not.Null);
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Residential_HasNoDitchMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Residential);
+
+            Assert.That(result.DitchMesh, Is.Null,
+                "Residential road (urban) must not have a ditch mesh.");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Service_HasNoDitchMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Service);
+
+            Assert.That(result.DitchMesh, Is.Null,
+                "Service road (urban) must not have a ditch mesh.");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_RuralRoad_HasNonEmptyDitchTextureId()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Secondary, region: RegionType.Temperate);
+
+            Assert.That(result.DitchTextureId, Is.Not.Null.And.Not.Empty,
+                "Rural road must carry a non-empty ditch texture ID.");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_UrbanRoad_HasEmptyDitchTextureId()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Residential);
+
+            Assert.That(result.DitchTextureId, Is.Empty,
+                "Urban road must have an empty ditch texture ID (no ditch).");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Ditch_VertexCount_IsCorrect()
+        {
+            // 6 ditch vertices per spline point (3 per side × 2 sides).
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+
+            Assert.That(result.DitchMesh!.Vertices.Length, Is.EqualTo(TwoPoints.Count * 6));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Ditch_TriangleCount_IsCorrect()
+        {
+            // (n-1) segments × 2 sides × 2 slopes × 2 tris × 3 indices = (n-1) × 24.
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+
+            Assert.That(result.DitchMesh!.Triangles.Length, Is.EqualTo((TwoPoints.Count - 1) * 24));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Ditch_BottomIsLowerThanRoadSurface()
+        {
+            // Ditch bottom vertices (index 1 and 4 of each point group) must be below road Y.
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+
+            var ditchVerts = result.DitchMesh!.Vertices;
+            float roadY = RoadMeshExtruder.TerrainClearance; // spline at Y=0, road at TerrainClearance
+
+            // Check bottom vertices of the first spline point (indices 1 and 4).
+            Assert.That(ditchVerts[1].y, Is.LessThan(roadY),
+                "Left ditch bottom must be below road surface level.");
+            Assert.That(ditchVerts[4].y, Is.LessThan(roadY),
+                "Right ditch bottom must be below road surface level.");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Ditch_OuterEdgeIsBeyondDitchWidth()
+        {
+            const float roadWidth = 12f; // Primary road
+            float halfWidth = roadWidth * 0.5f;
+
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(
+                TwoPoints, RoadType.Primary);
+
+            var ditchVerts = result.DitchMesh!.Vertices;
+            // Left outer (index 2): x < −(halfWidth + ditchWidth)
+            // Right outer (index 5): x > +(halfWidth + ditchWidth)
+            Assert.That(ditchVerts[2].x, Is.LessThan(-(halfWidth)),
+                "Left ditch outer edge must be further left than the road edge.");
+            Assert.That(ditchVerts[5].x, Is.GreaterThan(halfWidth),
+                "Right ditch outer edge must be further right than the road edge.");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Primary_HasEmptyKerbMesh()
+        {
+            // Rural roads use ditches rather than kerbs.
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+
+            Assert.That(result.KerbMesh.Vertices.Length, Is.EqualTo(0),
+                "Primary road (rural) must have an empty kerb mesh — ditches are used instead.");
+        }
+
+        // ── Lane-marking overlay mesh ─────────────────────────────────────────
+
+        [Test]
+        public void ExtrudeWithDetails_Primary_HasLaneMarkingMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+
+            Assert.That(result.LaneMarkingMesh, Is.Not.Null,
+                "Paved road types must have a lane-marking overlay mesh.");
+            Assert.That(result.LaneMarkingMesh!.Vertices.Length, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Residential_HasLaneMarkingMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Residential);
+
+            Assert.That(result.LaneMarkingMesh, Is.Not.Null);
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Dirt_HasNoLaneMarkingMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Dirt);
+
+            Assert.That(result.LaneMarkingMesh, Is.Null,
+                "Unpaved road types must not have a lane-marking overlay mesh.");
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Path_HasNoLaneMarkingMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Path);
+
+            Assert.That(result.LaneMarkingMesh, Is.Null);
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_Cycleway_HasNoLaneMarkingMesh()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Cycleway);
+
+            Assert.That(result.LaneMarkingMesh, Is.Null);
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_LaneMarkingMesh_VertexCount_MatchesRoadMesh()
+        {
+            // Lane-marking overlay has the same number of vertices as the road surface.
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+
+            Assert.That(result.LaneMarkingMesh!.Vertices.Length,
+                Is.EqualTo(result.RoadMesh.Vertices.Length));
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_LaneMarkingMesh_IsAboveRoadSurface()
+        {
+            // Lane-marking overlay must be slightly above the road surface (no z-fighting).
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Primary);
+
+            for (int i = 0; i < result.RoadMesh.Vertices.Length; i++)
+            {
+                float roadY    = result.RoadMesh.Vertices[i].y;
+                float markingY = result.LaneMarkingMesh!.Vertices[i].y;
+                Assert.That(markingY, Is.GreaterThan(roadY),
+                    $"Lane-marking vertex {i} must be above the road-surface vertex.");
+            }
+        }
+
+        [Test]
+        public void ExtrudeWithDetails_LaneMarkingMesh_Name_IsCorrect()
+        {
+            RoadMeshResult result = RoadMeshExtruder.ExtrudeWithDetails(TwoPoints, RoadType.Secondary);
+
+            Assert.That(result.LaneMarkingMesh!.name, Is.EqualTo("LaneMarkingMesh"));
+        }
+
+        // ── Ditch texture identifiers (RegionTextures) ────────────────────────
+
+        [Test]
+        public void GetDitchTextureId_Temperate_ReturnsTerrainGrass()
+        {
+            string id = RegionTextures.GetDitchTextureId(RegionType.Temperate);
+
+            Assert.That(id, Is.EqualTo("terrain_grass"));
+        }
+
+        [Test]
+        public void GetDitchTextureId_Desert_ReturnsTerrainSand()
+        {
+            string id = RegionTextures.GetDitchTextureId(RegionType.Desert);
+
+            Assert.That(id, Is.EqualTo("terrain_sand"));
+        }
+
+        [Test]
+        public void GetDitchTextureId_AllRegions_ReturnNonEmptyId()
+        {
+            foreach (RegionType region in System.Enum.GetValues(typeof(RegionType)))
+            {
+                string id = RegionTextures.GetDitchTextureId(region);
+                Assert.That(id, Is.Not.Null.And.Not.Empty,
+                    $"GetDitchTextureId must not return empty for region '{region}'.");
             }
         }
     }

@@ -269,6 +269,17 @@ namespace VectorRoad.Core
             surfaceGo.AddComponent<MeshCollider>().sharedMesh = result.RoadMesh;
             surfaceGo.layer = LayerMask.NameToLayer("Road");
 
+            if (result.LaneMarkingMesh != null && result.LaneMarkingMesh.vertexCount > 0
+                && !string.IsNullOrEmpty(result.LaneMarkingTextureId))
+            {
+                var laneGo = new GameObject("LaneMarking");
+                laneGo.transform.SetParent(parent.transform, false);
+                laneGo.AddComponent<MeshFilter>().sharedMesh = result.LaneMarkingMesh;
+                var laneRenderer = laneGo.AddComponent<MeshRenderer>();
+                Registry?.ApplyTo(laneRenderer, result.LaneMarkingTextureId);
+                laneGo.layer = LayerMask.NameToLayer("Road");
+            }
+
             if (result.KerbMesh != null && result.KerbMesh.vertexCount > 0)
             {
                 var kerbGo = new GameObject("Kerb");
@@ -277,6 +288,87 @@ namespace VectorRoad.Core
                 var kerbRenderer = kerbGo.AddComponent<MeshRenderer>();
                 Registry?.ApplyTo(kerbRenderer, result.KerbTextureId);
             }
+
+            if (result.DitchMesh != null && result.DitchMesh.vertexCount > 0
+                && !string.IsNullOrEmpty(result.DitchTextureId))
+            {
+                var ditchGo = new GameObject("Ditch");
+                ditchGo.transform.SetParent(parent.transform, false);
+                ditchGo.AddComponent<MeshFilter>().sharedMesh = result.DitchMesh;
+                var ditchRenderer = ditchGo.AddComponent<MeshRenderer>();
+                Registry?.ApplyTo(ditchRenderer, result.DitchTextureId);
+            }
+
+            var props = RoadsidePropPlacer.Place(finalSpline, roadType, region: region, wayId: road.WayId);
+            foreach (PropPlacement prop in props)
+                SpawnPropCollider(prop, parent.transform);
+        }
+
+        private void SpawnPropCollider(PropPlacement prop, Transform parent)
+        {
+            var go = new GameObject($"Prop_{prop.Type}");
+            go.transform.SetParent(parent, false);
+            go.transform.position = prop.Position;
+            go.transform.forward  = prop.Forward;
+
+            switch (prop.Type)
+            {
+                case PropType.LampPost:
+                case PropType.SignPost:
+                {
+                    var col    = go.AddComponent<CapsuleCollider>();
+                    col.radius = 0.1f;
+                    col.height = 4f;
+                    col.center = new Vector3(0f, 2f, 0f);
+
+                    string textureId = prop.Type == PropType.LampPost ? "prop_lamppost" : "prop_signpost";
+                    AddCapsuleVisual(go, scale: new Vector3(0.2f, 2f, 0.2f), centerY: 2f, textureId: textureId);
+                    break;
+                }
+
+                case PropType.Tree:
+                {
+                    var col    = go.AddComponent<CapsuleCollider>();
+                    col.radius = 0.3f;
+                    col.height = 4f;
+                    col.center = new Vector3(0f, 2f, 0f);
+
+                    AddCapsuleVisual(go, scale: new Vector3(0.6f, 2f, 0.6f), centerY: 2f, textureId: "prop_tree");
+                    break;
+                }
+
+                case PropType.Fence:
+                {
+                    var col    = go.AddComponent<BoxCollider>();
+                    col.size   = new Vector3(2f, 1.5f, 0.1f);
+                    col.center = new Vector3(0f, 0.75f, 0f);
+
+                    AddBoxVisual(go, scale: new Vector3(2f, 1.5f, 0.1f), centerY: 0.75f, textureId: "prop_fence");
+                    break;
+                }
+            }
+        }
+
+        private void AddCapsuleVisual(GameObject parent, Vector3 scale, float centerY, string textureId)
+        {
+            var visual = new GameObject("Mesh");
+            visual.transform.SetParent(parent.transform, false);
+            visual.transform.localPosition = new Vector3(0f, centerY, 0f);
+            visual.transform.localScale    = scale;
+            visual.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Capsule.fbx");
+            var mr = visual.AddComponent<MeshRenderer>();
+            Registry?.ApplyTo(mr, textureId);
+        }
+
+        private void AddBoxVisual(GameObject parent, Vector3 scale, float centerY, string textureId)
+        {
+            var visual = new GameObject("Mesh");
+            visual.transform.SetParent(parent.transform, false);
+            visual.transform.localPosition = new Vector3(0f, centerY, 0f);
+            visual.transform.localScale    = scale;
+            visual.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+            var mr = visual.AddComponent<MeshRenderer>();
+            Registry?.ApplyTo(mr, textureId);
         }
 
         private static Vector3[] ClampRoadSplineToTerrain(
@@ -419,12 +511,14 @@ namespace VectorRoad.Core
             wallGo.AddComponent<MeshFilter>().sharedMesh = result.WallMesh;
             var wallRenderer = wallGo.AddComponent<MeshRenderer>();
             Registry?.ApplyTo(wallRenderer, result.WallTextureId);
+            wallGo.AddComponent<MeshCollider>().sharedMesh = result.WallMesh;
 
             var roofGo = new GameObject("Roof");
             roofGo.transform.SetParent(parent.transform, false);
             roofGo.AddComponent<MeshFilter>().sharedMesh = result.RoofMesh;
             var roofRenderer = roofGo.AddComponent<MeshRenderer>();
             Registry?.ApplyTo(roofRenderer, result.RoofTextureId);
+            roofGo.AddComponent<MeshCollider>().sharedMesh = result.RoofMesh;
         }
 
         private void BuildWater(WaterBody water, RegionType region)
