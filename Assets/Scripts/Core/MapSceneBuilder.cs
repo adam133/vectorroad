@@ -277,6 +277,48 @@ namespace VectorRoad.Core
                 var kerbRenderer = kerbGo.AddComponent<MeshRenderer>();
                 Registry?.ApplyTo(kerbRenderer, result.KerbTextureId);
             }
+
+            var props = RoadsidePropPlacer.Place(finalSpline, roadType, region: region, wayId: road.WayId);
+            foreach (PropPlacement prop in props)
+                SpawnPropCollider(prop, parent.transform);
+        }
+
+        private static void SpawnPropCollider(PropPlacement prop, Transform parent)
+        {
+            var go = new GameObject($"Prop_{prop.Type}");
+            go.transform.SetParent(parent, false);
+            go.transform.position = prop.Position;
+            go.transform.forward  = prop.Forward;
+
+            switch (prop.Type)
+            {
+                case PropType.LampPost:
+                case PropType.SignPost:
+                {
+                    var col    = go.AddComponent<CapsuleCollider>();
+                    col.radius = 0.1f;
+                    col.height = 4f;
+                    col.center = new Vector3(0f, 2f, 0f);
+                    break;
+                }
+
+                case PropType.Tree:
+                {
+                    var col    = go.AddComponent<CapsuleCollider>();
+                    col.radius = 0.3f;
+                    col.height = 4f;
+                    col.center = new Vector3(0f, 2f, 0f);
+                    break;
+                }
+
+                case PropType.Fence:
+                {
+                    var col    = go.AddComponent<BoxCollider>();
+                    col.size   = new Vector3(2f, 1.5f, 0.1f);
+                    col.center = new Vector3(0f, 0.75f, 0f);
+                    break;
+                }
+            }
         }
 
         private static Vector3[] ClampRoadSplineToTerrain(
@@ -419,12 +461,14 @@ namespace VectorRoad.Core
             wallGo.AddComponent<MeshFilter>().sharedMesh = result.WallMesh;
             var wallRenderer = wallGo.AddComponent<MeshRenderer>();
             Registry?.ApplyTo(wallRenderer, result.WallTextureId);
+            wallGo.AddComponent<MeshCollider>().sharedMesh = result.WallMesh;
 
             var roofGo = new GameObject("Roof");
             roofGo.transform.SetParent(parent.transform, false);
             roofGo.AddComponent<MeshFilter>().sharedMesh = result.RoofMesh;
             var roofRenderer = roofGo.AddComponent<MeshRenderer>();
             Registry?.ApplyTo(roofRenderer, result.RoofTextureId);
+            roofGo.AddComponent<MeshCollider>().sharedMesh = result.RoofMesh;
         }
 
         private void BuildWater(WaterBody water, RegionType region)
